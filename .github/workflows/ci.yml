@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build with Maven (including tests)
+        run: mvn -B package
+
+      - name: Start app (background)
+        run: |
+          nohup java -jar target/chronos-0.0.1-SNAPSHOT.jar > app.log 2>&1 &
+
+      - name: Wait for OpenAPI endpoint (retry)
+        run: |
+          for i in {1..12}; do
+            if curl -sS http://localhost:8080/v3/api-docs -o openapi.json; then
+              echo "OpenAPI fetched"; break
+            else
+              echo "Waiting for app... ($i)"; sleep 5
+            fi
+          done || true
+
+      - name: Upload OpenAPI JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-json
+          path: openapi.json
+
+  generate-client:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download OpenAPI JSON artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-json
+          path: ./openapi
+
+      - name: Generate Java client SDK
+        uses: docker://openapitools/openapi-generator-cli:latest
+        with:
+          args: generate -i /openapi/openapi.json -g java -o /openapi/generated-client -p invokerPackage=com.example.chronos.client -p groupId=com.example -p artifactId=chronos-client
+
+      - name: Upload generated client
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-client
+          path: openapi/generated-client
+
+  render-diagrams:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Render PlantUML diagrams
+        uses: docker://plantuml/plantuml:latest
+        with:
+          args: -tpng docs/*.puml
+
+      - name: Upload diagrams
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagrams
+          path: docs/*.png
