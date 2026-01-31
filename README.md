@@ -74,7 +74,23 @@ swagger.security.username=youruser
 swagger.security.password=yourpass
 ```
 
-When enabled, access to `/swagger-ui/**` and `/v3/api-docs/**` will require the configured username and password.
+Recommended (secure) ways to provide credentials:
+
+- Use environment variables when starting the app:
+
+```bash
+export SWAGGER_SECURITY_USERNAME=youruser
+export SWAGGER_SECURITY_PASSWORD=yourpass
+mvn spring-boot:run
+```
+
+Spring will pick up environment variables mapped to properties (e.g., `SWAGGER_SECURITY_USERNAME` -> `swagger.security.username`).
+
+- Use your platform's secret manager or CI/CD secure variables and inject values into the runtime environment rather than hardcoding them in configuration files.
+
+Notes:
+- The application encodes the provided password using BCrypt at startup before creating the in-memory user, which means the original plaintext password is not stored in-memory as-is by the user object. For production, use a proper user store and secure password management instead of an in-memory user.
+- For production-grade authentication, prefer OAuth2/OpenID Connect or an external auth provider over Basic auth.
 
 ## CI / GitHub Actions
 
