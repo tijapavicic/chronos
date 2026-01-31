@@ -1,0 +1,25 @@
+name: Run Postman collection
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'postman/**'
+      - '.github/workflows/postman.yml'
+
+jobs:
+  run-postman:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Newman collection
+        run: npm run postman
+        env:
+          # By default point to http://localhost:8080 — override in workflow_dispatch if desired
+          BASE_URL: http://localhost:8080

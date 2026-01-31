@@ -1,0 +1,13 @@
+{
+  "name": "chronos-postman",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Helpers to run the Chronos Postman collection with Newman",
+  "devDependencies": {
+    "newman": "^5.3.0"
+  },
+  "scripts": {
+    "postman": "newman run postman/Chronos.postman_collection.json -e postman/Chronos.postman_environment.json --timeout-request 10000",
+    "postman:run": "sh -c \"newman run postman/Chronos.postman_collection.json -e postman/Chronos.postman_environment.json --env-var 'baseUrl=${BASE_URL:-http://localhost:8080}' --timeout-request 10000\""
+  }
+}

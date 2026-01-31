@@ -1,0 +1,374 @@
+{
+  "info": {
+    "name": "Chronos API",
+    "_postman_id": "chronos-collection-0001",
+    "description": "Postman collection for Chronos API endpoints (with example tests and pre-request scripts)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "OpenAPI JSON",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v3/api-docs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v3",
+            "api-docs"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// If swagger credentials are present in the environment, add Basic Auth header",
+              "if (pm.environment.get('swaggerUsername')) {",
+              "    var auth = btoa(pm.environment.get('swaggerUsername') + ':' + pm.environment.get('swaggerPassword'));",
+              "    pm.request.headers.upsert({ key: 'Authorization', value: 'Basic ' + auth });",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('OpenAPI endpoint returns 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var json = pm.response.json();",
+              "pm.test('Response contains openapi', function () {",
+              "    pm.expect(json).to.have.property('openapi');",
+              "});",
+              "pm.test('Paths include /simulation/ping', function () {",
+              "    pm.expect(json.paths).to.have.property('/simulation/ping');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Example OpenAPI response",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v3/api-docs"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_body": "{\n  \"openapi\": \"3.0.1\",\n  \"paths\": {\n    \"/simulation/ping\": {}\n  }\n}",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Swagger UI",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/swagger-ui.html",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "swagger-ui.html"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Add Basic Auth header when swagger credentials are present",
+              "if (pm.environment.get('swaggerUsername')) {",
+              "    var auth = btoa(pm.environment.get('swaggerUsername') + ':' + pm.environment.get('swaggerPassword'));",
+              "    pm.request.headers.upsert({ key: 'Authorization', value: 'Basic ' + auth });",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Swagger UI reachable', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Simulation - Ping",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/simulation/ping",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "simulation",
+            "ping"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Ping returns 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Ping example",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/simulation/ping" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_body": "",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Facilities - Get all",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "facilities"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Get all facilities returns 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response is an array', function () {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Facilities example",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/facilities" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_body": "[ { \"facilityId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"facilityName\": \"Main Warehouse\", \"facilityType\": \"WAREHOUSE\", \"isExtendable\": false } ]",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Facilities - Create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"facilityName\": \"Main Warehouse\",\n  \"facilityType\": \"WAREHOUSE\",\n  \"isExtendable\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "facilities"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Create facility returns 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "var json = pm.response.json();",
+              "pm.test('Response contains facilityName', function () {",
+              "    pm.expect(json).to.have.property('facilityName');",
+              "});",
+              "pm.test('facilityName matches request', function () {",
+              "    pm.expect(json.facilityName).to.eql('Main Warehouse');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Create facility example",
+          "originalRequest": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": { "raw": "{{baseUrl}}/api/facilities" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_body": "{ \"facilityId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"facilityName\": \"Main Warehouse\", \"facilityType\": \"WAREHOUSE\", \"isExtendable\": false }",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Facilities - Get by name",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities/:name",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "facilities",
+            ":name"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Get by name returns 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response is an array', function () {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Get by name example",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/facilities/Main Warehouse" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_body": "[ { \"facilityId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"facilityName\": \"Main Warehouse\", \"facilityType\": \"WAREHOUSE\", \"isExtendable\": false } ]",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    },
+    {
+      "name": "Facilities - Get by type",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/facilities/type/:type",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "facilities",
+            "type",
+            ":type"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Get by type returns 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Response is an array', function () {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "response": [
+        {
+          "name": "Get by type example",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/facilities/type/WAREHOUSE" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_body": "[ { \"facilityId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\", \"facilityName\": \"Main Warehouse\", \"facilityType\": \"WAREHOUSE\", \"isExtendable\": false } ]",
+          "_postman_previewlanguage": "json"
+        }
+      ]
+    }
+  ],
+  "event": [],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "default"
+    }
+  ]
+}
