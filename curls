@@ -1,0 +1,16 @@
+
+lsof -i :8080
+jps -l
+
+cd chronos
+export JAVA_HOME="/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home" && mvn spring-boot:run
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home && mvn -DskipTests=false test -e
+
+curl -X POST -H "Content-Type: application/json" -d '{"facilityName":"Test Facility","facilityType":"MONEY","extendable":true}' http://localhost:8080/api/facilities
+
+curl http://localhost:8080/api/facilities
+
+curl -X POST http://localhost:8080/api/facilities \
+  
+
+curl -X POST -H "Content-Type: application/json" -d '{"facilityName":"Test Facility","facilityType":"MONEY","extendable":true}' http://localhost:8080/api/facilities
