@@ -1,0 +1,80 @@
+@startgantt
+title Chronos Technical Roadmap 2026
+printscale weekly zoom 2
+
+skinparam gantt {
+    BarColor LightBlue
+    BarBorderColor Blue
+    GroupBackgroundColor LightGray
+    GroupBorderColor DimGray
+    MilestoneBackgroundColor Black
+}
+
+Project starts 2026-01-30
+
+-- Phase 1: Foundation & Core Services (Q1) --
+[Repository & Build Setup] as [Init] lasts 3 days
+[Init] is colored in YellowGreen
+[Domain Modeling & Schema Design] as [Domain] lasts 1 week
+[Domain] starts at [Init]'s end
+[Domain] is colored in YellowGreen
+[REST API Design (OpenAPI)] as [API_Design] lasts 1 week
+[API_Design] starts at [Domain]'s end
+[API_Design] is colored in YellowGreen
+[Core Service Implementation] as [Impl] lasts 2 weeks
+[Impl] starts at [API_Design]'s end
+[Impl] is colored in Green
+[Unit & Integration Strategy] as [Test_Strat] lasts 3 days
+[Test_Strat] starts at [Impl]'s end
+[Test_Strat] is colored in Green
+[CI Pipeline (GitHub Actions)] as [CI] lasts 4 days
+[CI] starts at [Test_Strat]'s end
+[CI] is colored in CornflowerBlue
+
+-- Phase 2: Advanced Logic & Persistence (Q2) --
+[Calculation Engine (Strategy Pattern)] as [Calc_Eng] lasts 3 weeks
+[Calc_Eng] starts at [CI]'s end
+[Calc_Eng] is colored in LightGoldenRodYellow
+[Persistence Layer Optimization (JPA/QueryDSL)] as [JPA_Opt] lasts 2 weeks
+[JPA_Opt] starts at [Calc_Eng]'s end
+[JPA_Opt] is colored in Wheat
+[Risk Analysis Integration (External API)] as [Risk_Int] lasts 3 weeks
+[Risk_Int] starts at [JPA_Opt]'s end
+[Risk_Int] is colored in Orange
+[Asynchronous Processing (RabbitMQ/Kafka)] as [Async] lasts 3 weeks
+[Async] starts at [Risk_Int]'s end
+[Async] is colored in Orange
+
+-- Phase 3: Scalability & DevOps (Q3) --
+[Containerization (Docker Multi-stage)] as [Docker] lasts 1 week
+[Docker] starts at [Async]'s end
+[Docker] is colored in Magenta
+[Orchestration (Kubernetes/Helm)] as [K8s] lasts 3 weeks
+[K8s] starts at [Docker]'s end
+[K8s] is colored in Magenta
+[Observability (Prometheus/Grafana)] as [Obs] lasts 2 weeks
+[Obs] starts at [K8s]'s end
+[Obs] is colored in Purple
+[Distributed Tracing (Jaeger)] as [Trace] lasts 1 week
+[Trace] starts at [Obs]'s end
+[Trace] is colored in Purple
+[Load Testing (Gatling/K6)] as [LoadTest] lasts 2 weeks
+[LoadTest] starts at [Trace]'s end
+[LoadTest] is colored in Purple
+
+-- Phase 4: Hardening & Release (Q4) --
+[Security Hardening (OAuth2/OIDC)] as [Sec] lasts 3 weeks
+[Sec] starts at [LoadTest]'s end
+[Sec] is colored in Crimson
+[API Gateway Config (Gateway/Ingress)] as [Gateway] lasts 2 weeks
+[Gateway] starts at [Sec]'s end
+[Gateway] is colored in Crimson
+[Blue/Green Deployment Strategy] as [Dep_Strat] lasts 2 weeks
+[Dep_Strat] starts at [Gateway]'s end
+[Dep_Strat] is colored in Crimson
+[Final Arch Review & Documentation] as [Docs] lasts 2 weeks
+[Docs] starts at [Dep_Strat]'s end
+[Docs] is colored in Firebrick
+[v1.0.0 GA] happens at [Docs]'s end
+
+@endgantt

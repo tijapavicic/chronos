@@ -1,0 +1,49 @@
+@startuml
+title Simulation Flow
+
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam shadowing false
+skinparam defaultFontName "Verdana"
+
+skinparam participant {
+    BackgroundColor<<Frontend>> LightBlue
+    BorderColor<<Frontend>> Blue
+    BackgroundColor<<Backend>> LightGreen
+    BorderColor<<Backend>> Green
+    BackgroundColor<<Service>> LightYellow
+    BorderColor<<Service>> Orange
+    BackgroundColor<<Database>> LightGray
+    BorderColor<<Database>> Black
+}
+
+participant "SimFront" as SimFront <<Frontend>>
+participant "SimBack" as SimBack <<Backend>>
+participant "CalcEngine" as CalcEngine <<Service>>
+participant "SaSViya" as SaSViya <<Service>>
+database "DB" as DB <<Database>>
+
+SimFront -> SimBack: Request Simulation
+activate SimBack
+
+note right of SimBack: Orchestrating Request
+
+SimBack -> CalcEngine: Request Calculation
+activate CalcEngine
+CalcEngine --> SimBack: Calculation Results
+deactivate CalcEngine
+
+SimBack -> SaSViya: Request Analytics
+activate SaSViya
+SaSViya --> SimBack: Analytics Results
+deactivate SaSViya
+
+SimBack -> DB: Persist Combined Results
+activate DB
+DB --> SimBack: Persistence Acknowledged
+deactivate DB
+
+SimBack --> SimFront: Simulation Response
+deactivate SimBack
+
+@enduml

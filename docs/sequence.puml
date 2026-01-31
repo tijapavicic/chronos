@@ -1,0 +1,12 @@
+@startuml
+title Simulation Ping Sequence
+
+actor Client
+participant "SimulationController" as Controller
+
+Client -> Controller: GET /simulation/ping
+activate Controller
+Controller -> Client: 200 OK
+deactivate Controller
+
+@enduml
