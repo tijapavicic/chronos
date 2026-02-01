@@ -1,0 +1,68 @@
+@startuml
+title Chronos - Class Diagram
+
+' Packages
+package "model" {
+  class Facility {
+    UUID facilityId
+    String facilityName
+    FacilityType facilityType
+    boolean isExtendable
+  }
+
+  enum FacilityType {
+    BONDS
+    MONEY
+  }
+}
+
+package "dto" {
+  class FacilityDTO {
+    UUID facilityId
+    String facilityName
+    FacilityType facilityType
+    boolean isExtendable
+  }
+}
+
+package "repository" {
+  interface FacilityRepository {
+    +List<Facility> findByFacilityName(String facilityName)
+    +List<Facility> findByFacilityType(FacilityType facilityType)
+  }
+}
+
+package "service" {
+  class FacilityService {
+    -FacilityRepository facilityRepository
+    +FacilityDTO createFacility(FacilityDTO dto)
+    +List<FacilityDTO> getAllFacilities()
+    +List<FacilityDTO> getFacilitiesByName(String name)
+    +List<FacilityDTO> getFacilitiesByType(FacilityType type)
+  }
+}
+
+package "controller" {
+  class FacilityController {
+    -FacilityService facilityService
+    +ResponseEntity<FacilityDTO> createFacility(FacilityDTO dto)
+    +ResponseEntity<List<FacilityDTO>> getAllFacilities()
+    +ResponseEntity<List<FacilityDTO>> getFacilitiesByName(String name)
+    +ResponseEntity<List<FacilityDTO>> getFacilitiesByType(FacilityType type)
+  }
+}
+
+' Relationships
+FacilityRepository o-- Facility : manages
+FacilityDTO ..> Facility : maps to / corresponds to
+FacilityService --> FacilityRepository : uses
+FacilityController --> FacilityService : uses
+FacilityDTO --> FacilityService : used-by
+
+' Optional: show that repository extends JpaRepository (informational)
+interface JpaRepository
+FacilityRepository -|> JpaRepository
+
+skinparam classAttributeIconSize 0
+
+@enduml

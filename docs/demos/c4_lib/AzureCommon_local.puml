@@ -1,0 +1,16 @@
+'
+' Local minimal Azure icon alias file for offline rendering
+' Maps commonly used Azure icon names to existing sprites defined in C4_Context.puml
+'
+' This local file is intentionally minimal: if you want full Azure icons, replace this
+' file with the upstream AzureCommon.puml (and adjust includes) or set USE_REMOTE_AZURE_ICONS
+' and remove this local include.
+'
+' Aliases - map Azure icon names to C4 sprites available in the local C4 library
+!define AzureActiveDirectory person
+!define AzureSQLDatabase "<color:red><$Batch></color>"
+!define AzureVirtualMachine Batch
+!define AzureAPIManagement Compute
+!define AzureAppService AzureActiveDirectory
+!define AzureFunction Lambda
+!define AzureContainerInstance robot2

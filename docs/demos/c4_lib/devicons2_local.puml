@@ -1,0 +1,8 @@
+' Local minimal devicons2 alias file for offline rendering
+' Maps a small subset of devicons2 sprites to local images/sprites
+'
+' Define a gear icon to emulate a devicons2 gear/cogs sprite
+!define devicons2_gear img:../c4_lib/gear.svg
+
+' You can add more mappings here, e.g.:
+' !define devicons2_cpu img:../c4_lib/calculator.svg

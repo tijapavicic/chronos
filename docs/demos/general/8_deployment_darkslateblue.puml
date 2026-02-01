@@ -1,0 +1,102 @@
+@startuml
+title Chronos - Deployment Diagram (DarkSlateBlue Palette)
+
+' DarkSlateBlue color palette (dark background, blue-violet accents)
+skinparam backgroundColor #0f1724
+skinparam node {
+  BorderColor #483D8B
+  BackgroundColor #1E2138
+  FontColor #E6E6FA
+}
+skinparam component {
+  BackgroundColor #2E2E5A
+  BorderColor #7B68EE
+  FontColor #E6E6FA
+}
+skinparam artifact {
+  BackgroundColor #1E2138
+  BorderColor #483D8B
+}
+skinparam database {
+  BackgroundColor #26283f
+  BorderColor #483D8B
+  FontColor #E6E6FA
+}
+skinparam note {
+  BackgroundColor #2b3050
+  BorderColor #5b4fb8
+  FontColor #E6E6FA
+}
+skinparam shadowing false
+
+' Top-level external actor
+actor "API Client" as Client #7B68EE
+Client --> LB : HTTPS
+
+' Load balancer
+node "Load Balancer" as LB #39407a {
+  [NGINX] #5057a8
+}
+
+' Application cluster
+cloud "Chronos App Cluster" #2b2f52 {
+  node "App Node 1" as App1 #1e2338 {
+    component "Chronos (Spring Boot)" as AppComp1
+    artifact "chronos.jar" as Jar1
+  }
+
+  node "App Node 2" as App2 #1e2338 {
+    component "Chronos (Spring Boot)" as AppComp2
+    artifact "chronos.jar" as Jar2
+  }
+}
+
+' Service/process mapping
+AppComp1 -down-> AppComp2 : Replication / Scaling (stateless)
+
+' Database node
+database "H2 Database (or external DB)" as DB #26283f {
+  [FACILITY Table]
+}
+
+' Persistence and repository
+AppComp1 --> DB : JDBC
+AppComp2 --> DB : JDBC
+
+' Monitoring and logging
+node "Monitoring" as Monitoring #1e2338 {
+  component "Prometheus" as Prom
+  component "Grafana" as Graf
+}
+AppComp1 --> Prom : metrics
+AppComp2 --> Prom : metrics
+Prom --> Graf : reads
+
+' Optional: background job / scheduler
+node "Scheduler" as Scheduler #23263a {
+  component "Simulation Runner" as SimRunner
+}
+Scheduler --> AppComp1 : trigger simulation
+
+' Notes and endpoints
+note right of LB
+  Public endpoint: https://api.example.com
+  Routes traffic to app nodes
+end note
+
+note left of DB
+  Persistence for facilities
+  (can be H2 for demos or external RDBMS)
+end note
+
+' Deployment relationships
+Client -> LB
+LB -> App1
+LB -> App2
+App1 -> DB
+App2 -> DB
+App1 -> Monitoring
+App2 -> Monitoring
+Scheduler -> App1
+
+@enduml

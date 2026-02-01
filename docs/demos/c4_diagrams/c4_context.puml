@@ -1,0 +1,20 @@
+@startuml
+' C4 Context diagram for Chronos
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Context.puml
+!includeurl C4P/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(apiClient, "API Client", "External system or user consuming the Chronos REST API")
+Person(monitoring, "Monitoring System", "Scrapes metrics from Chronos")
+
+System_Boundary(chronos_sys, "Chronos") {
+  System(chronos, "Chronos API", "Spring Boot application that manages facilities and simulations")
+}
+
+Rel(apiClient, chronos, "Uses", "HTTPS/JSON")
+Rel(monitoring, chronos, "Monitors", "Prometheus metrics")
+
+SHOW_LEGEND()
+@enduml

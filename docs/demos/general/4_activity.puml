@@ -1,0 +1,80 @@
+@startuml
+title Chronos - Activity Diagram (Create & Search Facility)
+
+' Color theme for the diagram
+skinparam backgroundColor #f7f9fc
+skinparam activity {
+  BackgroundColor #fff7e6
+  BorderColor #2d3748
+  FontColor #2d3748
+}
+skinparam activityDiamond {
+  BackgroundColor #fff2cc
+  BorderColor #2d3748
+}
+skinparam note {
+  BackgroundColor #fff1a8
+  BorderColor #d69e2e
+  FontColor #2d3748
+}
+skinparam swimlane {
+  BackgroundColor #e6f3ff
+  BorderColor #2b6cb0
+  FontColor #1a365d
+}
+
+|#E6F3FF API Client|
+start
+:Send Create Facility request (POST /api/facilities);
+|#FFF0F6 FacilityController|
+:Validate request body;
+if (valid?) then (yes)
+  :Call FacilityService.createFacility(dto);
+  |#E8FFF0 FacilityService|
+  :Map DTO -> Facility entity;
+  :Call FacilityRepository.save(facility);
+  |#FFF8E1 FacilityRepository|
+  :Persist entity to database;
+  |#F0F8FF Database|
+  note right: INSERT facility
+  -->
+  |#FFF8E1 FacilityRepository|
+  :Return saved Facility;
+  |#E8FFF0 FacilityService|
+  :Map Facility -> FacilityDTO;
+  |#FFF0F6 FacilityController|
+  :Return 200 OK with FacilityDTO;
+  |#E6F3FF API Client|
+  :Receive created FacilityDTO;
+else (no)
+  |#FFF0F6 FacilityController|
+  :Return 400 Bad Request;
+  |#E6F3FF API Client|
+  stop
+endif
+
+
+' --- Search by name flow ---
+|#E6F3FF API Client|
+:Send Search Facilities by Name request (GET /api/facilities/{name});
+|#FFF0F6 FacilityController|
+:Extract `name` path variable;
+:Call FacilityService.getFacilitiesByName(name);
+|#E8FFF0 FacilityService|
+:Call FacilityRepository.findByFacilityName(name);
+|#FFF8E1 FacilityRepository|
+:Query database;
+|#F0F8FF Database|
+note right: SELECT * FROM facility WHERE facility_name = ?
+-->
+|#FFF8E1 FacilityRepository|
+:Return List<Facility>;
+|#E8FFF0 FacilityService|
+:Map each Facility -> FacilityDTO;
+|#FFF0F6 FacilityController|
+:Return 200 OK with List<FacilityDTO>;
+|#E6F3FF API Client|
+:Receive list of FacilityDTOs;
+stop
+
+@enduml

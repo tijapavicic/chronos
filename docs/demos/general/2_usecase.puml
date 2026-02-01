@@ -1,0 +1,43 @@
+@startuml
+title Chronos - Use Case Diagram
+
+actor "API Client" as Client
+actor "Monitoring System" as Monitor
+
+rectangle "Chronos API" {
+  usecase "Create Facility" as UC_Create
+  usecase "Get All Facilities" as UC_List
+  usecase "Search Facilities by Name" as UC_SearchName
+  usecase "Get Facilities by Type" as UC_SearchType
+  usecase "Ping Simulation Server" as UC_Ping
+}
+
+' Associations
+Client --> UC_Create
+Client --> UC_List
+Client --> UC_SearchName
+Client --> UC_SearchType
+Monitor --> UC_Ping
+
+' Notes with endpoint references
+note right of UC_Create
+  POST /api/facilities
+end note
+note right of UC_List
+  GET /api/facilities
+end note
+note right of UC_SearchName
+  GET /api/facilities/{name}
+end note
+note right of UC_SearchType
+  GET /api/facilities/type/{type}
+end note
+note right of UC_Ping
+  GET /simulation/ping
+end note
+
+skinparam usecase {
+  BackgroundColor<<default>> PaleGreen
+}
+
+@enduml

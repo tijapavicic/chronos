@@ -1,0 +1,36 @@
+@startuml
+scale 0.5
+' Set landscape orientation and left-to-right layout for wider diagrams
+left to right direction
+skinparam pageOrientation landscape
+
+' C4 Context diagram for Chronos - Simulation Subsystem
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(simUser, "User", "Simulation Engine User / initiating simulations and viewing results")
+'Person(operator, "Operator", "Ops/Developer managing simulations and infrastructure")
+
+ContainerDb(sasDb, "SaS DB", "Data store for SaS (scenarios, parameters, results)")
+System_Ext(calcEngine, "VRE ", "Calculation Engine / High-performance compute service for heavy computations")
+System_Ext(sasInterface, "SaS Interface", "External SaS system / API that provides domain data")
+
+System_Boundary(sim_sub, "Simulation Subsystem") {
+  System(simulFrontend, "SimulFrontend", "Simulation frontend (web UI / SPA)")
+  System(simulBackend, "SimulBackend", "Simulation engine / backend that runs scenarios and coordinates calculations")
+  System(sideCar, "SideCar", "SideCar / Enables SaS DB connectivity for SimulBackend")
+}
+
+Rel(simUser, simulFrontend, "Uses", "HTTPS/JSON")
+Rel(simulFrontend, simulBackend, "Calls", "HTTP/REST / WebSocket")
+
+Rel(simulBackend, calcEngine, "Requests heavy computations from", "RPC / HTTP / gRPC")
+Rel(simulBackend, sideCar, "Integrates with", "HTTP API")
+'Rel(operator, simulBackend, "Deploys / Operates")
+Rel(sideCar, sasInterface, "Reads from & writes to", "SQL/DB client")
+Rel(sasInterface, sasDb, "Reads from & writes to", "SQL/DB client")
+
+SHOW_LEGEND()
+@enduml

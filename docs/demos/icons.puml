@@ -1,0 +1,55 @@
+@startuml
+scale 0.5
+' Set landscape orientation and left-to-right layout for wider diagrams
+left to right direction
+skinparam pageOrientation landscape
+
+' C4 Context diagram for Chronos - Simulation Subsystem
+!define RELATIVE_INCLUDE true
+!include ../c4_lib/C4_Component.puml
+
+!include <awslib/AWSCommon>
+!include <awslib/Compute/all.puml>
+
+' https://crashedmind.github.io/PlantUMLHitchhikersGuide/StdlibUnderTheHood/StdlibUnderstanding.html
+rectangle "<$EC2>"
+rectangle "<$Batch>"
+rectangle "<$Lambda>"
+"<color:magenta><$Batch></color>"
+"<color:red><$Batch></color>""<color:red><$Batch></color>"
+
+
+' Include local minimal Azure icon aliases for offline rendering
+!include ../c4_lib/AzureCommon_local.puml
+
+LAYOUT_WITH_LEGEND()
+
+'AddElementTag("v1.0", $borderColor="#d73027", $borderThickness="2")
+'AddElementTag("v1.1", $fontColor="#d73027", $sprite="img:https://example.com/new.png")
+'AddElementTag("deprecated", $bgColor="#cccccc", $shape=RoundedBoxShape(), $shadowing="false")
+
+' Use Azure icons (or offline aliases) for elements
+Person(simUser, "User", "Simulation Engine User / initiating simulations and viewing results", AzureActiveDirectory)
+'Person(operator, "Operator", "Ops/Developer managing simulations and infrastructure")
+
+ContainerDb(sasDb, "SaS DB", "Data store for SaS (scenarios, parameters, results)", AzureSQLDatabase)
+System_Ext(calcEngine, "VRE ", "Calculation Engine / High-performance compute service for heavy computations", AzureVirtualMachine)
+System_Ext(sasInterface, "SaS Interface", "External SaS system / API that provides domain data", AzureAPIManagement)
+
+System_Boundary(sim_sub, "Simulation Subsystem") {
+  System(simulFrontend, "SimulFrontend", "Simulation frontend (web UI / SPA)", AzureAppService)
+  System(simulBackend, "SimulBackend", "Simulation engine / backend that runs scenarios and coordinates calculations", AzureFunction)
+  System(sideCar, "SideCar", "SideCar / Enables SaS DB connectivity for SimulBackend", AzureContainerInstance)
+}
+
+Rel(simUser, simulFrontend, "Uses", "HTTPS/JSON")
+Rel(simulFrontend, simulBackend, "Calls", "HTTP/REST / WebSocket")
+
+Rel(simulBackend, calcEngine, "Requests heavy computations from", "RPC / HTTP / gRPC")
+Rel(simulBackend, sideCar, "Integrates with", "HTTP API")
+'Rel(operator, simulBackend, "Deploys / Operates")
+Rel(sideCar, sasInterface, "Reads from & writes to", "SQL/DB client")
+Rel(sasInterface, sasDb, "Reads from & writes to", "SQL/DB client")
+
+SHOW_LEGEND()
+@enduml

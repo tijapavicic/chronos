@@ -1,0 +1,23 @@
+@startuml
+' C4 Component diagram for Chronos API (inside Chronos app)
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+Container(app, "Chronos API", "Spring Boot", "Main application")
+
+Component(facilityController, "FacilityController", "REST Controller", "Exposes endpoints for facility CRUD and search")
+Component(simulationController, "SimulationController", "REST Controller", "Simulation-related endpoints")
+Component(facilityService, "FacilityService", "Service", "Business logic for facilities")
+Component(facilityRepository, "FacilityRepository", "Repository", "JPA repository for Facility")
+Component(facilityDTO, "FacilityDTO", "DTO", "Data transfer object for Facility")
+Component(facilityModel, "Facility", "Entity", "JPA entity representing Facility")
+
+Rel(facilityController, facilityService, "Calls")
+Rel(facilityService, facilityRepository, "Uses")
+Rel(facilityService, facilityModel, "Creates/Maps to")
+Rel(facilityController, facilityDTO, "Receives/Returns")
+
+SHOW_LEGEND()
+@enduml

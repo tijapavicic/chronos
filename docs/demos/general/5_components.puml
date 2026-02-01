@@ -1,0 +1,42 @@
+@startuml
+!theme vibrant
+
+title Chronos Component Diagram
+
+Interface1 <-- [Component]
+Interface2 <- [Component]
+
+package "API Layer" {
+    [FacilityController] <<REST Controller>>
+    [SimulationController] <<REST Controller>>
+}
+
+package "Service Layer" {
+    [FacilityService] <<Service>>
+}
+
+package "Data Access Layer" {
+    [FacilityRepository] <<Repository>>
+}
+
+database "H2 Database" {
+    [FACILITY Table]
+}
+
+[FacilityController] --> [FacilityService] : Uses
+[FacilityService] --> [FacilityRepository] : Uses
+[FacilityRepository] --> [FACILITY Table] : Reads/Writes
+
+note right of [SimulationController]
+  Independent controller for
+  simulation checks (Ping)
+end note
+
+'skinparam component {
+'    BackgroundColor<<REST Controller>> CornflowerBlue
+'    BackgroundColor<<Service>> MediumSeaGreen
+'    BackgroundColor<<Repository>> SandyBrown
+'    FontColor White
+'}
+
+@enduml

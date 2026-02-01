@@ -1,0 +1,36 @@
+@startuml
+scale 0.5
+' C4 Container diagram for Simulation Subsystem (inside view)
+left to right direction
+skinparam pageOrientation landscape
+
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+Person(simUser, "Simulation User", "Person or system initiating simulations and viewing results")
+
+System_Boundary(sim_sub, "ING Hosting Platform") {
+    System_Boundary(ICHP, "In-Cloud Hosting Platform") {
+      Container(simulFrontend, "SimulFrontend", "React SPA / Web UI", "User interface for running simulations and viewing results (SPA)")
+      Container(simulBackend, "SimulBackend", "Spring Boot", "Backend service that orchestrates simulations, exposes REST API")
+      Container(sideCar, "SideCar", "Helper Service", "Sidecar for DB connectivity / caching")
+
+     }
+      Container(sasInterface, "SaS Interface", "External API", "Third-party SaS system access")
+      Container(calcEngine, "Calculation Engine", "External Compute Service", "High-performance calculation engine (gRPC/HTTP)")
+      ContainerDb(sasDb, "SaS DB", "Postgres / RDBMS", "Stores scenarios, parameters and results")
+}
+
+' Relationships (directional)
+Rel(simUser, simulFrontend, "Uses", "HTTPS/JSON")
+Rel(simulFrontend, simulBackend, "Calls", "REST/JSON / WebSocket")
+Rel(simulBackend, sideCar, "Schedules / dispatches jobs to", "Internal API / queue")
+Rel(sideCar, sasInterface, "Reads/Writes", "JDBC/SQL")
+Rel(sasInterface, sasDb, "Reads/Writes", "JDBC/SQL")
+Rel(simulBackend, sasInterface, "Fetches domain data from", "HTTP API")
+Rel(simulBackend, calcEngine, "Orchestrates compute work with", "RPC/HTTP")
+
+SHOW_LEGEND()
+@enduml

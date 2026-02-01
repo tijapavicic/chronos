@@ -1,0 +1,78 @@
+@startuml
+title Chronos - C4-style Classes (Code) Diagram
+
+' C4-like styling for class/code diagrams
+skinparam backgroundColor #f7fbff
+skinparam class {
+  BackgroundColor #ffffff
+  BorderColor #2b6cb0
+  FontColor #1a365d
+}
+
+package "Chronos API (Spring Boot)" {
+  class FacilityController <<Controller>> {
+    - facilityService: FacilityService
+    + createFacility(dto: FacilityDTO): FacilityDTO
+    + getAllFacilities(): List<FacilityDTO>
+    + getFacilitiesByName(name: String): List<FacilityDTO>
+    + getFacilitiesByType(type: FacilityType): List<FacilityDTO>
+  }
+
+  class SimulationController <<Controller>> {
+    + ping(): ResponseEntity<Void>
+  }
+
+  class FacilityService <<Service>> {
+    - facilityRepository: FacilityRepository
+    + createFacility(dto: FacilityDTO): FacilityDTO
+    + getAllFacilities(): List<FacilityDTO>
+    + getFacilitiesByName(name: String): List<FacilityDTO>
+    + getFacilitiesByType(type: FacilityType): List<FacilityDTO>
+  }
+
+  class FacilityRepository <<Repository>> {
+    + findByFacilityName(name: String): List<Facility>
+    + findByFacilityType(type: FacilityType): List<Facility>
+    + save(f: Facility): Facility
+  }
+
+  class FacilityDTO <<DTO>> {
+    + facilityId: UUID
+    + facilityName: String
+    + facilityType: FacilityType
+    + isExtendable: boolean
+  }
+
+  class Facility <<Entity>> {
+    - facilityId: UUID
+    - facilityName: String
+    - facilityType: FacilityType
+    - isExtendable: boolean
+  }
+
+  enum FacilityType {
+    BONDS
+    MONEY
+  }
+
+  class ChronosApplication <<Application>> {
+    + main(args: String[])
+  }
+}
+
+' Relationships (C4-style: component/class arrows)
+FacilityController --> FacilityService : uses
+SimulationController --> ChronosApplication : lifecycle
+FacilityService --> FacilityRepository : uses
+FacilityService --> Facility : maps to / creates
+FacilityService --> FacilityDTO : maps to
+FacilityRepository --> Facility : manages
+
+' Notes
+note top
+  This is a lightweight C4-style class/code diagram showing the main
+  classes in the Chronos API and their relationships (controllers,
+  services, repository, DTOs, and entities).
+end note
+
+@enduml

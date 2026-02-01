@@ -1,0 +1,27 @@
+@startuml
+title Simulation Ping Sequence
+
+actor Client
+participant "SimulationController" as Controller
+participant "I have a really\nlong name" as L #99FF99
+
+Bob ->x Alice
+Bob -> Alice
+Bob ->> Alice
+Bob -\ Alice
+Bob \\- Alice
+Bob //-- Alice
+Bob ->o Alice
+Bob o\\-- Alice
+Bob <-> Alice
+Bob <->o Alice
+
+Bob -[#red]> Alice : hello
+Alice -[#0000FF]->Bob : ok
+
+Client -> Controller: GET /simulation/ping
+activate Controller
+Controller -> Client: 200 OK
+deactivate Controller
+
+@enduml

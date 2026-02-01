@@ -1,0 +1,49 @@
+@startuml
+title Chronos - Facility State Diagram
+
+' Color theme
+skinparam backgroundColor #f4f7f9
+skinparam state {
+  BackgroundColor<<main>> #e6f3ff
+  BackgroundColor<<transient>> #fff7e6
+  BackgroundColor<<terminal>> #ffe6e6
+  BorderColor #2b6cb0
+  FontColor #1a365d
+}
+
+[*] --> Draft : create
+state Draft <<transient>> {
+}
+note right of Draft: Newly created facility DTO
+
+Draft --> Active : validate / save
+state Active <<main>> {
+}
+note right of Active: Facility is usable by the system
+
+' Declare Extended state first so notes referencing it are valid
+state Extended <<main>> {
+}
+note right of Extended: Extended/modified facility
+
+Active --> Extended : extend
+note right of Extended : Allowed only if facility.isExtendable == true
+
+Active --> Inactive : deactivate
+state Inactive <<transient>> {
+}
+note right of Inactive: Temporarily disabled
+Inactive --> Active : reactivate
+
+Active --> Archived : archive
+Extended --> Archived : archive
+state Archived <<terminal>> {
+}
+note right of Archived: Archived - read-only historical record
+Archived --> [*] : delete
+
+' Optional transitions
+Draft --> Archived : reject
+Inactive --> Archived : archive
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml
+scale 0.5
+' C4 Component diagram for Simulation Backend internals (SimulBackend)
+left to right direction
+skinparam pageOrientation landscape
+
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+'Container(simulBackend, "SimulBackend", "Backend service", "Orchestrates simulations and coordinates compute work")
+System_Boundary(sim_sub, "ING Hosting Platform: Main Components") {
+        Component(apiController, "SimulationController", "REST Controller", "Exposes simulation endpoints: run, status, results")
+        Component(orchestrator, "SimulationOrchestrator", "Service", "Coordinates simulation lifecycle, validates input, queues tasks")
+        Component(jobScheduler, "JobScheduler", "Scheduler", "Schedules jobs and retries")
+        Component(jobRunner, "JobRunner", "Worker", "Executes simulation jobs, invokes calculation client")
+        Component(calcClient, "CalculationClient", "Client", "Sends compute requests to Calculation Engine (gRPC/HTTP)")
+'        Component(saScClient, "SaSClient", "Client", "Sends requests to SaSRepository for data persistence")
+        Component(saSSideCar, "SaS SideCar", "sidecar", "Sends requests to SaSRepository for data persistence")
+
+    ' Optional components boxed with very light grey background
+    rectangle "ING Hosting Platform: Optional Components" as optional_box #f5f5f5 {
+        Component(eventBus, "EventBus", "Messaging", "Internal event bus for job events and callbacks")
+        Component(cache, "Cache", "Cache/Redis", "Optional cache for intermediate results")
+    }
+
+    System_Boundary(external, "External Systems") {
+        System_Ext(calcEngine, "Calculation Engine", "External compute service")
+        Component(dataRepo, "SaSRepository", "Repository", "Persists scenarios, parameters, and results to SaS DB")
+        System_Ext(sasDb, "SaS DB", "Postgres / RDBMS")
+    }
+}
+' Relationships
+Rel(apiController, orchestrator, "Calls", "REST/JSON")
+Rel(orchestrator, jobScheduler, "Schedules", "Internal API / Cron")
+Rel(jobScheduler, jobRunner, "Dispatches jobs to", "Queue / internal API")
+Rel(jobRunner, calcClient, "Calls to perform heavy calculations", "gRPC/HTTP")
+Rel(jobRunner, saSSideCar, "SaS SideCar", "gRPC/HTTP")
+Rel( saSSideCar, saScClient, "Calls to perform heavy calculations", "gRPC/HTTP")
+Rel(calcClient, calcEngine, "Uses", "gRPC/HTTP")
+Rel(orchestrator, dataRepo, "Persists/Reads", "JDBC/SQL")
+
+Rel(jobRunner, eventBus, "Publishes job events to", "Messaging")
+Rel(orchestrator, cache, "Reads/Writes", "Redis")
+Rel(dataRepo, sasDb, "Reads/Writes", "JDBC/SQL")
+
+SHOW_LEGEND()
+@enduml

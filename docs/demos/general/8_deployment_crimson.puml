@@ -1,0 +1,97 @@
+@startuml
+title Chronos - Deployment Diagram (Crimson Palette)
+
+' Crimson color palette
+skinparam backgroundColor #ffffff
+skinparam node {
+  BorderColor #8B0000
+  BackgroundColor #fff0f0
+  FontColor #3b0b0b
+}
+skinparam component {
+  BackgroundColor #ffe6ea
+  BorderColor #b30000
+  FontColor #3b0b0b
+}
+skinparam artifact {
+  BackgroundColor #fff0f0
+  BorderColor #8b0000
+}
+skinparam database {
+  BackgroundColor #fff3f4
+  BorderColor #b30000
+  FontColor #3b0b0b
+}
+skinparam shadowing false
+
+' Top-level external actor
+actor "API Client" as Client #FAF0F2
+Client --> LB : HTTPS
+
+' Load balancer
+node "Load Balancer" as LB #FFD6DA {
+  [NGINX] #FFB6C1
+}
+
+' Application cluster
+cloud "Chronos App Cluster" #FFECEC {
+  node "App Node 1" as App1 #FFF0F2 {
+    component "Chronos (Spring Boot)" as AppComp1
+    artifact "chronos.jar" as Jar1
+  }
+
+  node "App Node 2" as App2 #FFF0F2 {
+    component "Chronos (Spring Boot)" as AppComp2
+    artifact "chronos.jar" as Jar2
+  }
+}
+
+' Service/process mapping
+AppComp1 -down-> AppComp2 : Replication / Scaling (stateless)
+
+' Database node
+database "H2 Database (or external DB)" as DB #FFE6E9 {
+  [FACILITY Table]
+}
+
+' Persistence and repository
+AppComp1 --> DB : JDBC
+AppComp2 --> DB : JDBC
+
+' Monitoring and logging
+node "Monitoring" as Monitoring #FFF0F2 {
+  component "Prometheus" as Prom
+  component "Grafana" as Graf
+}
+AppComp1 --> Prom : metrics
+AppComp2 --> Prom : metrics
+Prom --> Graf : reads
+
+' Optional: background job / scheduler
+node "Scheduler" as Scheduler #FFF4F6 {
+  component "Simulation Runner" as SimRunner
+}
+Scheduler --> AppComp1 : trigger simulation
+
+' Notes and endpoints
+note right of LB
+  Public endpoint: https://api.example.com
+  Routes traffic to app nodes
+end note
+
+note left of DB
+  Persistence for facilities
+  (can be H2 for demos or external RDBMS)
+end note
+
+' Deployment relationships
+Client -> LB
+LB -> App1
+LB -> App2
+App1 -> DB
+App2 -> DB
+App1 -> Monitoring
+App2 -> Monitoring
+Scheduler -> App1
+
+@enduml

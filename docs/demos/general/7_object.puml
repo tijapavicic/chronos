@@ -1,0 +1,47 @@
+@startuml
+title Chronos - Object Diagram (runtime examples)
+
+' Colorful visual theme
+skinparam backgroundColor #f0f7ff
+skinparam object {
+  BorderColor #2b6cb0
+  FontColor #1a365d
+}
+
+' Example runtime objects with per-object colors
+object Facility_1 <<Facility>> #FFFAE6 {
+  facilityId = 3fa85f64-5717-4562-b3fc-2c963f66afa6
+  facilityName = "Main Warehouse"
+  facilityType = MONEY
+  isExtendable = true
+}
+
+object FacilityDTO_1 <<FacilityDTO>> #E6FFF2 {
+  facilityId = 3fa85f64-5717-4562-b3fc-2c963f66afa6
+  facilityName = "Main Warehouse"
+  facilityType = MONEY
+  isExtendable = true
+}
+
+object FacilityRepository <<Repository>> #FFF0F6 {
+  save(facility)
+  findByFacilityName(name)
+}
+
+object FacilityService <<Service>> #F0F8FF {
+  createFacility(dto)
+  getFacilitiesByName(name)
+}
+
+object FacilityController <<Controller>> #FFF8E1 {
+  POST /api/facilities
+  GET /api/facilities/{name}
+}
+
+' Runtime links (object interactions)
+FacilityDTO_1 --> Facility_1 : mapsTo
+FacilityController --> FacilityService : calls
+FacilityService --> FacilityRepository : persists/queries
+FacilityRepository --> Facility_1 : returns
+
+@enduml
