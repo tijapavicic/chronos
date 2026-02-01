@@ -1,6 +1,7 @@
 package com.example.chronos.service;
 
 import com.example.chronos.dto.FacilityDTO;
+import com.example.chronos.mapper.FacilityMapper;
 import com.example.chronos.model.Facility;
 import com.example.chronos.model.FacilityType;
 import com.example.chronos.repository.FacilityRepository;
@@ -15,42 +16,30 @@ import java.util.stream.Collectors;
 public class FacilityService {
 
     private final FacilityRepository facilityRepository;
+    private final FacilityMapper facilityMapper;
 
     public FacilityDTO createFacility(FacilityDTO dto) {
-        Facility facility = Facility.builder()
-                .facilityName(dto.getFacilityName())
-                .facilityType(dto.getFacilityType())
-                .extendable(dto.isExtendable())
-                .build();
+        Facility facility = facilityMapper.toEntity(dto);
 
         Facility saved = facilityRepository.save(facility);
-        return mapToDTO(saved);
+        return facilityMapper.toDto(saved);
     }
 
     public List<FacilityDTO> getAllFacilities() {
         return facilityRepository.findAll().stream()
-                .map(this::mapToDTO)
+                .map(facilityMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     public List<FacilityDTO> getFacilitiesByName(String name) {
         return facilityRepository.findByFacilityName(name).stream()
-                .map(this::mapToDTO)
+                .map(facilityMapper::toDto)
                 .collect(Collectors.toList());
     }
 
     public List<FacilityDTO> getFacilitiesByType(FacilityType type) {
         return facilityRepository.findByFacilityType(type).stream()
-                .map(this::mapToDTO)
+                .map(facilityMapper::toDto)
                 .collect(Collectors.toList());
-    }
-
-    private FacilityDTO mapToDTO(Facility facility) {
-        return FacilityDTO.builder()
-                .facilityId(facility.getFacilityId())
-                .facilityName(facility.getFacilityName())
-                .facilityType(facility.getFacilityType())
-                .isExtendable(facility.isExtendable())
-                .build();
     }
 }

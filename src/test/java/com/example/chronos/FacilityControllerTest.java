@@ -12,8 +12,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,7 +30,7 @@ class FacilityControllerTest {
         FacilityDTO dto = FacilityDTO.builder()
                 .facilityName("Delta Fund")
                 .facilityType(FacilityType.MONEY)
-                .isExtendable(true)
+                .extendable(true)
                 .build();
 
         mockMvc.perform(post("/api/facilities")
