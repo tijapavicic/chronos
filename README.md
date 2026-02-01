@@ -117,5 +117,21 @@ The application includes the H2 Console for exploring the in-memory database.
 
 ## Documentation
 
+```shell
+brew install graphviz && command -v dot || true; dot -V 2>&1 || true
+ brew install plantuml || brew upgrade plantuml
+brew install graphviz
+command -v dot
+dot -V
+
+verification:
+/opt/homebrew/bin/dot -V
+which dot
+echo $PATH
+
+#open -a "IntelliJ IDEA"
+#export PATH="/opt/homebrew/bin:$PATH"
+```
+
 Sequence diagrams are located in the `docs` directory:
 -   `docs/sequence.puml`: Sequence diagram for the ping flow.
