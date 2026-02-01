@@ -20,7 +20,7 @@ public class FacilityService {
         Facility facility = Facility.builder()
                 .facilityName(dto.getFacilityName())
                 .facilityType(dto.getFacilityType())
-                .isExtendable(dto.isExtendable())
+                .extendable(dto.isExtendable())
                 .build();
 
         Facility saved = facilityRepository.save(facility);
