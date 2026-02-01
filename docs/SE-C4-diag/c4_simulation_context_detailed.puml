@@ -1,0 +1,56 @@
+@startuml
+scale 0.5
+' Set landscape orientation and left-to-right layout for wider diagrams
+left to right direction
+skinparam pageOrientation landscape
+
+' C4 Context diagram for Chronos - Simulation Subsystem
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!define RELATIVE_INCLUDE true
+!include ../c4_lib/C4_Container.puml
+!include ../c4_lib/C4_Component.puml
+
+' Define a grey tag for the frontend boundary
+AddSystemTag("frontend_grey", "#EEEEEE", "#000000", "#888888", "", "", "", "Frontend")
+' Also define a container tag so the simulFrontend container background can be grey
+AddContainerTag("frontend_grey", "#EEEEEE", "#000000", "#888888", "", "", "", "Frontend")
+
+LAYOUT_WITH_LEGEND()
+
+Person(user, "User", "Simul Engine User / initiating simulations and viewing results")
+ContainerDb(sasDb, "SaS DB", "Data store for SaS (scenarios, parameters, results)")
+ContainerDb(dwhDb, "DWH DB", "Data store for SaS (scenarios, parameters, results)")
+System_Ext(calcEngine, "VRE Server", "Calculation Engine / High-performance compute service for heavy computations")
+System_Ext(sasInterface, "SaS Interface", "External SaS system / API that provides domain data")
+
+System_Boundary(sim_sub, "SimulEngine") {
+
+        System_Boundary(sim_f, "Simul Frontend", "frontend_grey") {
+          Component(ui, "Simul UI", "Single Page Application / Web UI")
+          Component(SimulRestClient, "Simul Client", "REST client used by the UI to call backend APIs")
+        }
+
+        System_Boundary(sim_b, "Simul Backend") {
+          System(simulBackend, "Simul Server", "Simulation Controller / REST API server")
+          System(repoDWH, "Spring Data JPA DWH", "Repository / Data access layer for DWH DB")
+          System(vreClient, "VRE client", "Spring REST client used to call VRE Calculation Engine APIs")
+          System(sasClient, "SaS client", "Spring REST client used to call SaS Interface APIs")
+        }
+
+         System_Boundary(sidecar, "Simulation Backend") {
+           System(sideCar, "Side Car", "SideCar / Enables SaS DB connectivity for SimulBackend")
+         }
+}
+
+Rel(user, ui, "Uses", "HTTPS/JSON")
+
+Rel(SimulRestClient, simulBackend, "Calls", "HTTP/REST / WebSocket")
+
+Rel(vreClient, calcEngine, "Requests heavy computations from", " HTTP / gRPC")
+Rel(sasClient, sideCar, "Integrates with", "HTTP API")
+Rel(sideCar, sasInterface, "Reads from & writes to", "SQL/DB client")
+Rel(sasInterface, sasDb, "Reads from & writes to", "SQL/DB client")
+Rel(repoDWH, dwhDb, "Reads from & writes to", "SQL/DB client")
+
+SHOW_LEGEND()
+@enduml

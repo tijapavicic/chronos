@@ -1,0 +1,16 @@
+C4Context
+    title System Context diagram for Simulation Platform
+
+    Person(user, "User", "Initiates and monitors simulations")
+
+    System(simPlatform, "Simulation Platform", "Orchestrates and executes financial simulations on   Hosting Platform")
+
+    System_Ext(calcEngine, "Calculation Engine", "External compute service for financial calculations")
+    SystemDb_Ext(sasDb, "SaS Database", "Stores simulation scenarios and results")
+
+    Rel(user, simPlatform, "Submits simulation requests", "REST/JSON")
+    Rel(simPlatform, calcEngine, "Sends compute requests", "gRPC/HTTP")
+    Rel(simPlatform, sasDb, "Persists and queries simulation data", "JDBC/SQL")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+

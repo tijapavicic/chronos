@@ -1,0 +1,35 @@
+C4Container
+    title Container diagram for Simulation Platform
+
+    Person(user, "User", "Initiates simulations")
+
+    System_Boundary(simPlatform, "Simulation Platform -   Hosting") {
+        Container(apiController, "Simulation Controller", "Spring Boot REST", "Exposes simulation endpoints")
+        Container(orchestrator, "Simulation Orchestrator", "Spring Service", "Coordinates simulation lifecycle")
+        Container(jobScheduler, "Job Scheduler", "Spring Scheduler", "Schedules jobs and retries")
+        Container(jobRunner, "Job Runner", "Spring Worker", "Executes simulation jobs")
+        Container(calcClient, "Calculation Client", "gRPC/HTTP Client", "Sends compute requests")
+        Container(sasSideCar, "SaS SideCar", "Sidecar Service", "Proxies requests to SaS Repository")
+        Container(eventBus, "Event Bus", "Spring Events/Messaging", "Internal event distribution")
+        ContainerDb(cache, "Cache", "Redis", "Optional caching layer")
+    }
+
+    System_Ext(calcEngine, "Calculation Engine", "External compute service")
+    Container_Ext(sasRepo, "SaS Repository", "Repository Service", "Persists scenarios and results")
+    SystemDb_Ext(sasDb, "SaS Database", "PostgreSQL/RDBMS", "Stores simulation data")
+
+    Rel(user, apiController, "POST /simulation", "REST/JSON")
+    Rel(apiController, orchestrator, "Delegates to", "Internal API")
+    Rel(orchestrator, jobScheduler, "Schedules jobs", "Internal API/Cron")
+    Rel(orchestrator, cache, "Checks cache", "Redis protocol")
+    Rel(orchestrator, sasRepo, "Queries results", "JDBC/SQL")
+    Rel(jobScheduler, jobRunner, "Queues jobs", "Queue/Internal API")
+    Rel(jobRunner, eventBus, "Publishes events", "Messaging")
+    Rel(jobRunner, calcClient, "Requests computation", "gRPC/HTTP")
+    Rel(jobRunner, sasSideCar, "Persists scenario", "gRPC/HTTP")
+    Rel(calcClient, calcEngine, "Executes calculation", "gRPC/HTTP")
+    Rel(sasSideCar, sasRepo, "Saves data", "gRPC/HTTP")
+    Rel(sasRepo, sasDb, "Stores data", "JDBC/SQL")
+
+    UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
+

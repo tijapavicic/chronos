@@ -6,7 +6,8 @@ skinparam pageOrientation landscape
 
 ' C4 Context diagram for Chronos - Simulation Subsystem
 !define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
-!includeurl C4P/C4_Component.puml
+!define RELATIVE_INCLUDE true
+!include ../c4_lib/C4_Component.puml
 
 LAYOUT_WITH_LEGEND()
 

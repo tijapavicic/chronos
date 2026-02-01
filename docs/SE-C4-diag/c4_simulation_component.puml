@@ -11,7 +11,7 @@ skinparam pageOrientation landscape
 LAYOUT_WITH_LEGEND()
 
 
-System_Boundary(sim_sub, "ING Hosting Platform: Main Components") {
+System_Boundary(sim_sub, "  Hosting Platform: Main Components") {
         Component(apiController, "SimulationController", "REST Controller", "Exposes simulation endpoints: run, status, results")
         Component(orchestrator, "SimulationOrchestrator", "Service", "Coordinates simulation lifecycle, validates input, queues tasks")
         Component(jobRunner, "JobRunner", "Worker", "Executes simulation jobs, invokes calculation client")
@@ -20,13 +20,13 @@ System_Boundary(sim_sub, "ING Hosting Platform: Main Components") {
         Component(saSSideCar, "SaS SideCar", "sidecar", "Sends requests to SaSRepository for data persistence")
 
     ' Optional components boxed with very light grey background
-    rectangle "ING Hosting Platform: Optional Components" as optional_box #f5f5f5 {
+    rectangle "  Hosting Platform: Optional Components" as optional_box #f5f5f5 {
         Component(cache, "Cache", "Cache/Redis", "Optional cache for intermediate results")
     }
 }
 
     System_Boundary(external, "External Systems") {
-'     rectangle "ING Hosting Platform: Optional Components" as optional_box #f5f5f5 {
+'     rectangle "  Hosting Platform: Optional Components" as optional_box #f5f5f5 {
         Container(calcEngine, "Calculation Engine", "External compute service")
         Container(dataRepo, "SaSRepository", "Repository", "Persists scenarios, parameters, and results to SaS DB")
         ContainerDb(sasDb, "SaS DB", "Postgres / RDBMS")
@@ -49,7 +49,7 @@ Rel(dataRepo, sasDb, "Reads/Writes", "JDBC/SQL")
 'note right of sim_sub
 '  Legend:
 '  * External Systems — external databases and services (gray)
-'  * HostingPlatform - Main — core backend components inside the "ING Hosting Platform" boundary (colored)
+'  * HostingPlatform - Main — core backend components inside the "  Hosting Platform" boundary (colored)
 '  * HostingPlatform - Optional — optional/support components (pale/yellow box)
 'end note
 

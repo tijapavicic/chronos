@@ -5,13 +5,14 @@ left to right direction
 skinparam pageOrientation landscape
 
 !define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
-!includeurl C4P/C4_Container.puml
+!define RELATIVE_INCLUDE true
+!include ../c4_lib/C4_Component.puml
 
 LAYOUT_WITH_LEGEND()
 
 Person(simUser, "Simulation User", "Person or system initiating simulations and viewing results")
 
-System_Boundary(sim_sub, "ING Hosting Platform") {
+System_Boundary(sim_sub, "  Hosting Platform") {
     System_Boundary(ICHP, "In-Cloud Hosting Platform") {
       Container(simulFrontend, "SimulFrontend", "React SPA / Web UI", "User interface for running simulations and viewing results (SPA)")
       Container(simulBackend, "SimulBackend", "Spring Boot", "Backend service that orchestrates simulations, exposes REST API")

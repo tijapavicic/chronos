@@ -1,0 +1,52 @@
+flowchart TB
+%% Define styles
+    classDef personSe fill: #08427b, stroke: #052e56, color: #fff
+    classDef sasPallete fill: #087b7b, stroke: #052e56, color: #fff
+    classDef container fill: #1168bd, stroke: #226984, color: #fff
+    classDef database fill: #438dd5, stroke: #2e6295, color: #fff
+    classDef external fill: #845878, stroke: #666, color: #fff
+%% User
+    user([Se User<br/>Initiates flow]):::personSe
+%% Internal Containers
+    subgraph simPlatform["SE Platform"]
+        subgraph simBackend["SE backend<br/> Hosting Platform"]
+            apiController[SE Controller<br/>Spring Boot REST<br/>Exposes SE endpoints]:::container
+            orchestrator[SE Orchestrator<br/>Spring Service<br/>Coordinates SE lifecycle]:::container
+            jobScheduler[Job Scheduler<br/>Spring Scheduler<br/>Schedules jobs and retries]:::container
+            jobRunner[Job Runner<br/>Spring Worker<br/>Executes SE jobs]:::container
+            calcClient[Calc Client<br/>gRPC/HTTP Client<br/>Sends compute requests]:::container
+            sasSideCar[SaS SideCar<br/>Sidecar Service<br/>Proxies requests to SaS Repository]:::container
+            eventBus[Event Bus<br/>Spring Events/Messaging<br/>Internal event distribution]:::container
+            cache[(Cache<br/>Redis<br/>Optional caching layer)]:::database
+        end
+    end
+
+%% External Systems
+    subgraph calcSection["Calc Platform"]
+        calcServer[Calc Service<br/>External compute service]:::external
+        calcDb[(Calc Database<br/>PostgreSQL/RDBMS<br/>Stores data)]:::external
+    end
+%% SaS Platform Section
+%%    subgraph sas["SaS"]
+        userSas([SaS User<br/>Initiates flow]):::sasPallete
+        subgraph sasSection["SaS Platform"]
+            sasRepo[SaS Repository<br/>Repository Service<br/>Persists scenarios and results]:::sasPallete
+            sasDb[(SaS Database<br/>PostgreSQL/RDBMS<br/>Stores SE data)]:::sasPallete
+        end
+%%    end
+
+%% Relationships
+    user -->|POST /SE<br/>REST/JSON| apiController
+    apiController -->|Delegates to<br/>Internal API| orchestrator
+    orchestrator -->|Schedules jobs<br/>Internal API/Cron| jobScheduler
+    orchestrator -->|Checks cache<br/>Redis protocol| cache
+    orchestrator -->|Queries results<br/>JDBC/SQL| sasRepo
+    jobScheduler -->|Queues jobs<br/>Queue/Internal API| jobRunner
+    jobRunner -->|Publishes events<br/>Messaging| eventBus
+    jobRunner -->|Requests computation<br/>gRPC/HTTP| calcClient
+    jobRunner -->|Persists scenario<br/>gRPC/HTTP| sasSideCar
+    calcClient -->|Executes externals<br/>gRPC/HTTP| calcServer
+    calcServer -->|Reads data<br/>JDBC/SQL| calcDb
+    sasSideCar -->|Saves data<br/>gRPC/HTTP| sasRepo
+    sasRepo -->|Stores data<br/>JDBC/SQL| sasDb
+    userSas -->|Query scenarios<br/>REST/JSON| sasRepo

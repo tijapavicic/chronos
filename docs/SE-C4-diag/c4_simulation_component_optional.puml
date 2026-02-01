@@ -5,12 +5,13 @@ left to right direction
 skinparam pageOrientation landscape
 
 !define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
-!includeurl C4P/C4_Component.puml
+!define RELATIVE_INCLUDE true
+!include ../c4_lib/C4_Component.puml
 
 LAYOUT_WITH_LEGEND()
 
 'Container(simulBackend, "SimulBackend", "Backend service", "Orchestrates simulations and coordinates compute work")
-System_Boundary(sim_sub, "ING Hosting Platform: Main Components") {
+System_Boundary(sim_sub, "  Hosting Platform: Main Components") {
         Component(apiController, "SimulationController", "REST Controller", "Exposes simulation endpoints: run, status, results")
         Component(orchestrator, "SimulationOrchestrator", "Service", "Coordinates simulation lifecycle, validates input, queues tasks")
         Component(jobScheduler, "JobScheduler", "Scheduler", "Schedules jobs and retries")
@@ -20,7 +21,7 @@ System_Boundary(sim_sub, "ING Hosting Platform: Main Components") {
         Component(saSSideCar, "SaS SideCar", "sidecar", "Sends requests to SaSRepository for data persistence")
 
     ' Optional components boxed with very light grey background
-    rectangle "ING Hosting Platform: Optional Components" as optional_box #f5f5f5 {
+    rectangle "  Hosting Platform: Optional Components" as optional_box #f5f5f5 {
         Component(eventBus, "EventBus", "Messaging", "Internal event bus for job events and callbacks")
         Component(cache, "Cache", "Cache/Redis", "Optional cache for intermediate results")
     }

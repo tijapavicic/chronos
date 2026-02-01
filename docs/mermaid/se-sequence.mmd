@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant User
+    participant SimulationController
+    participant SimulationOrchestrator
+    participant JobScheduler
+    participant JobRunner
+    participant EventBus
+    participant Cache
+    participant CalculationClient
+    participant SaSSideCar
+    participant CalculationEngine
+    participant SaSRepository
+    participant SaSDB
+
+    User->>SimulationController: POST /simulation (REST/JSON)
+    SimulationController->>SimulationOrchestrator: Start simulation
+    SimulationOrchestrator->>Cache: Check cache (Redis)
+    Cache-->>SimulationOrchestrator: Cache result
+    SimulationOrchestrator->>JobScheduler: Schedule job (Internal API/Cron)
+    JobScheduler->>JobRunner: Queue job (Queue/Internal API)
+
+    JobRunner->>EventBus: Publish job started event
+    JobRunner->>CalculationClient: Send compute request (gRPC/HTTP)
+    CalculationClient->>CalculationEngine: Execute calculation (gRPC/HTTP)
+    CalculationEngine-->>CalculationClient: Return results
+    CalculationClient-->>JobRunner: Computation complete
+
+    JobRunner->>SaSSideCar: Persist scenario (gRPC/HTTP)
+    SaSSideCar->>SaSRepository: Save data (gRPC/HTTP)
+    SaSRepository->>SaSDB: Store in database (JDBC/SQL)

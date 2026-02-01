@@ -1,0 +1,32 @@
+C4Component
+    title Component diagram for Simulation Orchestration
+
+    Container_Boundary(orchestrator, "Simulation Orchestrator") {
+        Component(simService, "Simulation Service", "Spring @Service", "Main orchestration logic")
+        Component(cacheManager, "Cache Manager", "Spring Cache", "Manages Redis cache operations")
+        Component(statusTracker, "Status Tracker", "Service Component", "Tracks job execution status")
+        Component(resultAggregator, "Result Aggregator", "Service Component", "Aggregates simulation results")
+        Component(eventPublisher, "Event Publisher", "Spring Events", "Publishes domain events")
+    }
+
+    Container(apiController, "Simulation Controller", "REST Controller", "Handles HTTP requests")
+    Container(jobScheduler, "Job Scheduler", "Scheduler", "Schedules jobs")
+    Container(jobRunner, "Job Runner", "Worker", "Executes jobs")
+    ContainerDb(cache, "Cache", "Redis", "Cache layer")
+    Container_Ext(sasRepo, "SaS Repository", "Repository", "Data persistence")
+    Container(eventBus, "Event Bus", "Messaging", "Event distribution")
+
+    Rel(apiController, simService, "Calls", "Internal API")
+    Rel(simService, cacheManager, "Uses cache", "Cache API")
+    Rel(simService, statusTracker, "Updates status", "Internal")
+    Rel(simService, jobScheduler, "Schedules jobs", "Scheduler API")
+    Rel(simService, resultAggregator, "Aggregates results", "Internal")
+    Rel(simService, eventPublisher, "Publishes events", "Spring Events")
+    Rel(cacheManager, cache, "Reads/writes", "Redis protocol")
+    Rel(statusTracker, sasRepo, "Queries job status", "JDBC/SQL")
+    Rel(resultAggregator, sasRepo, "Fetches results", "JDBC/SQL")
+    Rel(eventPublisher, eventBus, "Sends events", "Messaging")
+    Rel(jobRunner, statusTracker, "Updates", "Internal")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
+
