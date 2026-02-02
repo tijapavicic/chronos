@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# chmod +x scripts/export-env.sh && ./scripts/export-env.sh
-
 # Load environment variables from the project's .env file into the current shell
 # Usage: source scripts/export-env.sh
 set -euo pipefail
