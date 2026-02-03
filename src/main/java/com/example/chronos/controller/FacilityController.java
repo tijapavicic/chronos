@@ -7,10 +7,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/facilities")
@@ -22,14 +24,14 @@ public class FacilityController {
 
     @Operation(summary = "Create a new facility")
     @ApiResponse(responseCode = "200", description = "Facility created successfully")
-    @PostMapping
-    public ResponseEntity<FacilityDTO> createFacility(@RequestBody FacilityDTO dto) {
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<FacilityDTO> createFacility(@Valid @RequestBody FacilityDTO dto) {
         return ResponseEntity.ok(facilityService.createFacility(dto));
     }
 
     @Operation(summary = "Get all facilities")
     @ApiResponse(responseCode = "200", description = "List of facilities")
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<FacilityDTO>> getAllFacilities() {
         return ResponseEntity.ok(facilityService.getAllFacilities());
     }

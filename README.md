@@ -32,7 +32,15 @@ A simple Spring Boot server with a ping endpoint and H2 database for simulation 
 
 Run the application using the Maven plugin:
 ```bash
-mvn spring-boot:run
+#mvn spring-boot:run
+mvn test -DskipTests=false -e 
+mvn -Dspring-boot.run.arguments="--swagger.enabled=true" -DskipTests=true spring-boot:run
+```
+
+```shell
+pwd && ls -la
+sed -n '1,240p' src/main/java/com/example/chronos/config | sed -n '1,240p'
+
 ```
 
 The server will start on `http://localhost:8080`.
