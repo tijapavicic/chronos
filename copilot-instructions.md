@@ -107,3 +107,54 @@ If unsure
 - Ask one short question to clarify API shape, naming, or status code preference. When in doubt follow existing repo conventions (error codes, `X-Correlation-Id`, `swagger.enabled`).
 
 Done — the new `copilot-instructions.md` has been created at the repository root.
+
+Repository folder structure: ASCII Tree Generator
+--------------------------
+Describe the repository layout so Copilot suggestions place files in the correct locations and follow the project's conventions.
+
+Use the ASCII tree below as the canonical quick-reference for where to place new files and tests.
+
+```text
+chronos/                         # repo root
+├── pom.xml                       # Maven build file
+├── README.md                     # Project README
+├── README-DOCKER.md              # Docker usage/readme
+├── Dockerfile                    # Container image build
+├── .github/                      # CI workflows, repo utilities
+│   ├── workflows/
+│   └── COPILOT_PERSONAL_INSTRUCTIONS.md
+├── docs/                         # architecture, diagrams, plantuml
+├── postman/                      # postman collections
+├── scripts/                      # helper scripts
+├── copilot-instructions.md       # this file (copilot guidance)
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   └── com/example/chronos/
+│   │   │       ├── controller/      # REST controllers & advices
+│   │   │       ├── service/         # business logic
+│   │   │       ├── dto/             # DTOs
+│   │   │       ├── model/           # JPA entities / domain models
+│   │   │       ├── repository/      # Spring Data repositories
+│   │   │       ├── exception/       # custom exceptions
+│   │   │       ├── config/          # application configuration
+│   │   │       ├── mapper/          # MapStruct mappers
+│   │   │       └── runtime/         # runtime helpers/endpoints
+│   │   └── resources/
+│   │       ├── application.properties
+│   │       └── data.sql
+│   └── test/
+│       └── java/
+│           └── com/example/chronos/ # tests mirror main package structure
+└── target/                        # build output (do not edit)
+```
+
+Top-level notes
+- Place Java source under `src/main/java/com/example/chronos/<package>` using the package structure above.
+- Place tests under `src/test/java/com/example/chronos/<package>` mirroring production packages.
+- Avoid creating unrelated top-level folders; prefer adding under the existing structure.
+
+How Copilot should use this structure
+- When generating new Java classes, place them under `src/main/java/com/example/chronos/<package>` matching the component (controller, service, dto, etc.).
+- When suggesting tests, place them under `src/test/java/com/example/chronos/<package>` and keep naming aligned (e.g., `XxxControllerTest` next to `XxxController`).
+- Avoid creating files in `target/`, and prefer updating existing modules rather than creating new top-level packages without a clear reason.
