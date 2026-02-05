@@ -1,9 +1,6 @@
 package com.example.chronos.exception;
 
-import lombok.Builder;
-
-@Builder
-public class ApplicationException extends RuntimeException{
+public abstract class ApplicationException extends RuntimeException{
     protected ApplicationException() {
         super();
     }

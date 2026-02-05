@@ -36,16 +36,38 @@ public class FacilityControllerAdvice extends GlobalControllerAdvice{
             HttpServletRequest request) {
         String correlationId = getCorrelationId(request);
         HttpStatus status = mapStatus(ex);
+        // Determine an appropriate error code for the specific exception
+        String code = mapCode(ex, status);
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(OffsetDateTime.now())
                 .status(status.value())
                 .error(status.getReasonPhrase())
                 .message(ex.getMessage())
                 .path(request.getRequestURI())
-                .code("ERR_APPLICATION")
+                .code(code)
                 .correlationId(correlationId)
                 .build();
         return new ResponseEntity<>(body, status);
+    }
+
+    private String mapCode(ApplicationException ex, HttpStatus status) {
+        if (ex instanceof ResourceNotFoundException) {
+            return "ERR_NOT_FOUND";
+        }
+        if (ex instanceof BadRequestException) {
+            return "ERR_BAD_REQUEST";
+        }
+        if (ex instanceof ConflictException) {
+            return "ERR_CONFLICT";
+        }
+        if (ex instanceof UnauthorizedException) {
+            return "ERR_UNAUTHORIZED";
+        }
+        if (ex instanceof ForbiddenException) {
+            return "ERR_FORBIDDEN";
+        }
+        // For DatabaseTimeoutException and other application exceptions default to generic application error
+        return "ERR_APPLICATION";
     }
 
     private HttpStatus mapStatus(ApplicationException exception){
