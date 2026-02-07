@@ -1,0 +1,26 @@
+flowchart LR
+%% Define styles
+    classDef frontendPallete fill: #052E56, stroke: #052e56, color: #fff
+    classDef personSe fill: #08427b, stroke: #052e56, color: #fff
+    classDef container fill: #1168bd, stroke: #226984, color: #fff
+
+%% User
+    user([SE User<br/>Initiates flow]):::personSe
+
+%% Frontend Subgraph in Landscape
+    subgraph seFrontend["SE Frontend - Hosting Platform"]
+        direction LR
+        UI[User Interface<br/>User form]:::frontendPallete
+        authZ[Authorization<br/>Spring Boot REST]:::frontendPallete
+        saClient[SA Client<br/>Spring Boot REST<br/>Consumes SE endpoints]:::frontendPallete
+    end
+
+%% Backend API (simplified)
+    apiController[SE Controller<br/>Spring Boot REST<br/>Exposes SE endpoints]:::container
+
+%% Relationships
+    user -->|User request| UI
+    UI -->|POST /SE<br/>REST/JSON| authZ
+    authZ -->|Authenticated request<br/>REST/JSON| saClient
+    saClient -->|POST /SE<br/>REST/JSON| apiController
+
