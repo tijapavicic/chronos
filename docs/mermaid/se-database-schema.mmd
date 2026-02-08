@@ -1,0 +1,283 @@
+---
+title: SE Platform Database Schema
+---
+erDiagram
+    %% ============================================================================
+    %% 🎨 SE PLATFORM - COLORFUL DATABASE SCHEMA
+    %% ============================================================================
+    %% Optimized, grouped, and visually enhanced ER diagram
+    %% ============================================================================
+
+    %% ============================================================================
+    %% 👤 TENANT & USER GROUP (Multi-tenancy & Authentication)
+    %% ============================================================================
+
+    TENANT {
+        uuid id PK
+        string name UK
+        string slug UK
+        string plan
+        jsonb settings
+        int max_jobs
+        boolean active
+        timestamp created_at
+    }
+
+    USER {
+        uuid id PK
+        uuid tenant_id FK
+        string email UK
+        string username UK
+        string password_hash
+        string first_name
+        string last_name
+        string role
+        boolean active
+        timestamp created_at
+        timestamp last_login
+    }
+
+    SESSION {
+        uuid id PK
+        uuid user_id FK
+        string token UK
+        string refresh_token
+        timestamp expires_at
+        string ip_address
+        timestamp created_at
+    }
+
+    API_KEY {
+        uuid id PK
+        uuid user_id FK
+        string key_hash UK
+        string name
+        string scope
+        boolean active
+        timestamp expires_at
+        timestamp created_at
+    }
+
+    %% ============================================================================
+    %% 🎯 CORE SIMULATION GROUP (Jobs & Execution)
+    %% ============================================================================
+
+    SCENARIO {
+        uuid id PK
+        uuid user_id FK
+        uuid parent_id FK
+        string name
+        text description
+        jsonb parameters
+        string status
+        int version
+        string hash UK
+        int usage_count
+        timestamp created_at
+    }
+
+    SIMULATION_JOB {
+        uuid id PK
+        uuid user_id FK
+        uuid tenant_id FK
+        uuid scenario_id FK
+        string name
+        string status
+        string priority
+        int retry_count
+        timestamp submitted_at
+        timestamp started_at
+        timestamp completed_at
+        int duration_ms
+        jsonb config
+        string correlation_id
+        timestamp created_at
+    }
+
+    JOB_EXECUTION {
+        uuid id PK
+        uuid job_id FK
+        int attempt
+        string status
+        string worker_id
+        timestamp started_at
+        timestamp ended_at
+        int duration_ms
+        text error_msg
+        jsonb metrics
+        timestamp created_at
+    }
+
+    JOB_RESULT {
+        uuid id PK
+        uuid job_id FK
+        jsonb output
+        jsonb metadata
+        string checksum
+        bigint size_bytes
+        string s3_path
+        boolean cached
+        timestamp cached_until
+        timestamp created_at
+    }
+
+    JOB_LOG {
+        uuid id PK
+        uuid job_id FK
+        string level
+        text message
+        jsonb context
+        string source
+        timestamp logged_at
+    }
+
+    %% ============================================================================
+    %% ⚡ EXTERNAL INTEGRATION GROUP (Calc & SaS)
+    %% ============================================================================
+
+    CALC_SERVICE {
+        uuid id PK
+        string name UK
+        string base_url
+        string protocol
+        boolean active
+        int timeout_ms
+        int max_retries
+        jsonb health_check
+        timestamp created_at
+    }
+
+    CALC_REQUEST {
+        uuid id PK
+        uuid job_id FK
+        uuid service_id FK
+        string status
+        jsonb request
+        jsonb response
+        string request_id UK
+        timestamp sent_at
+        timestamp received_at
+        int duration_ms
+        int retry_count
+        timestamp created_at
+    }
+
+    SAS_SYNC {
+        uuid id PK
+        uuid job_id FK
+        string sas_record_id
+        string status
+        jsonb payload
+        timestamp synced_at
+        int retry_count
+        timestamp created_at
+    }
+
+    %% ============================================================================
+    %% 💾 PERFORMANCE GROUP (Cache)
+    %% ============================================================================
+
+    CACHE_ENTRY {
+        uuid id PK
+        string cache_key UK
+        uuid job_id FK
+        jsonb data
+        int hit_count
+        bigint size_bytes
+        timestamp expires_at
+        timestamp last_access
+        timestamp created_at
+    }
+
+    %% ============================================================================
+    %% 📡 EVENTS & OBSERVABILITY GROUP
+    %% ============================================================================
+
+    EVENT {
+        uuid id PK
+        uuid job_id FK
+        string event_type
+        jsonb payload
+        string topic
+        string partition_key
+        boolean processed
+        timestamp published_at
+        timestamp created_at
+    }
+
+    AUDIT_LOG {
+        uuid id PK
+        uuid user_id FK
+        string action
+        string entity_type
+        uuid entity_id
+        jsonb old_value
+        jsonb new_value
+        string ip_address
+        timestamp created_at
+    }
+
+    JOB_METRIC {
+        uuid id PK
+        uuid job_id FK
+        string metric_name
+        float value
+        string unit
+        timestamp measured_at
+        timestamp created_at
+    }
+
+    %% ============================================================================
+    %% 📧 NOTIFICATION GROUP
+    %% ============================================================================
+
+    NOTIFICATION {
+        uuid id PK
+        uuid user_id FK
+        uuid job_id FK
+        string type
+        string status
+        string subject
+        text message
+        jsonb metadata
+        timestamp sent_at
+        timestamp read_at
+        timestamp created_at
+    }
+
+    %% ============================================================================
+    %% 🔗 RELATIONSHIPS
+    %% ============================================================================
+
+    %% Tenant → User (Multi-tenancy)
+    TENANT ||--o{ USER : contains
+    TENANT ||--o{ SIMULATION_JOB : owns
+
+    %% User → Auth & Resources
+    USER ||--o{ SESSION : has
+    USER ||--o{ API_KEY : owns
+    USER ||--o{ SCENARIO : creates
+    USER ||--o{ SIMULATION_JOB : submits
+    USER ||--o{ AUDIT_LOG : generates
+    USER ||--o{ NOTIFICATION : receives
+
+    %% Scenario → Jobs
+    SCENARIO ||--o{ SIMULATION_JOB : "used-by"
+
+    %% Simulation Job → Execution Pipeline
+    SIMULATION_JOB ||--o{ JOB_EXECUTION : executes
+    SIMULATION_JOB ||--o| JOB_RESULT : produces
+    SIMULATION_JOB ||--o{ JOB_LOG : logs
+    SIMULATION_JOB ||--o{ JOB_METRIC : measures
+
+    %% Job → External Systems
+    SIMULATION_JOB ||--o{ CALC_REQUEST : triggers
+    SIMULATION_JOB ||--o{ SAS_SYNC : syncs
+    SIMULATION_JOB ||--o{ CACHE_ENTRY : caches
+    SIMULATION_JOB ||--o{ EVENT : emits
+    SIMULATION_JOB ||--o{ NOTIFICATION : sends
+
+    %% Calc Service → Requests
+    CALC_SERVICE ||--o{ CALC_REQUEST : processes
+
+

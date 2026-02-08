@@ -1,0 +1,157 @@
+graph TB
+    %% ============================================================================
+    %% SE PLATFORM - EXECUTIVE DASHBOARD VIEW
+    %% ============================================================================
+    %% Interactive, high-level architecture overview with metrics
+    %% ============================================================================
+
+    %% Define professional color palette
+    classDef user fill:#3b82f6,stroke:#1d4ed8,stroke-width:4px,color:#fff,rx:20,ry:20
+    classDef frontend fill:#0ea5e9,stroke:#0284c7,stroke-width:3px,color:#fff,rx:12,ry:12
+    classDef backend fill:#8b5cf6,stroke:#7c3aed,stroke-width:3px,color:#fff,rx:12,ry:12
+    classDef data fill:#10b981,stroke:#059669,stroke-width:3px,color:#fff,rx:12,ry:12
+    classDef external fill:#f59e0b,stroke:#d97706,stroke-width:3px,color:#fff,rx:12,ry:12
+    classDef messaging fill:#ec4899,stroke:#db2777,stroke-width:3px,color:#fff,rx:12,ry:12
+    classDef metrics fill:#6366f1,stroke:#4f46e5,stroke-width:2px,color:#fff,rx:8,ry:8
+
+    %% ============================================================================
+    %% USER LAYER
+    %% ============================================================================
+    User["👥 USERS<br/>━━━━━━━━━━<br/>10K+ Active Users<br/>500 req/min"]:::user
+
+    %% ============================================================================
+    %% PRESENTATION LAYER
+    %% ============================================================================
+    subgraph Frontend["🌐 PRESENTATION TIER"]
+        UI["📱 Web UI<br/>━━━━━━<br/>React SPA<br/>99.9% Uptime"]:::frontend
+        Mobile["📲 Mobile App<br/>━━━━━━<br/>iOS/Android<br/>Native"]:::frontend
+        API_GW["🚪 API Gateway<br/>━━━━━━<br/>Kong/Nginx<br/>Rate Limiting"]:::frontend
+    end
+
+    %% ============================================================================
+    %% APPLICATION LAYER
+    %% ============================================================================
+    subgraph Application["⚙️ APPLICATION TIER"]
+        Auth["🔐 Auth Service<br/>━━━━━━<br/>OAuth2/JWT<br/>Keycloak"]:::backend
+        SE_API["🎮 SE API<br/>━━━━━━<br/>Spring Boot<br/>8 Pods"]:::backend
+        Orchestrator["🎼 Orchestrator<br/>━━━━━━<br/>Workflow Engine<br/>Camunda"]:::backend
+        JobService["🏃 Job Service<br/>━━━━━━<br/>Async Workers<br/>12 Threads"]:::backend
+    end
+
+    %% ============================================================================
+    %% INTEGRATION LAYER
+    %% ============================================================================
+    subgraph Integration["🔌 INTEGRATION TIER"]
+        EventBus["📡 Event Bus<br/>━━━━━━<br/>Kafka<br/>3 Brokers"]:::messaging
+        Cache["💾 Cache<br/>━━━━━━<br/>Redis Cluster<br/>5GB Memory"]:::messaging
+        Queue["📨 Queue<br/>━━━━━━<br/>RabbitMQ<br/>HA Mode"]:::messaging
+    end
+
+    %% ============================================================================
+    %% DATA LAYER
+    %% ============================================================================
+    subgraph DataTier["🗄️ DATA TIER"]
+        PrimaryDB["🗃️ Primary DB<br/>━━━━━━<br/>PostgreSQL 15<br/>Master-Slave"]:::data
+        ReplicaDB["📋 Replica DB<br/>━━━━━━<br/>Read Replicas<br/>3 Instances"]:::data
+        SaSDB["🗂️ SaS Repository<br/>━━━━━━<br/>Document Store<br/>MongoDB"]:::data
+        Analytics["📊 Analytics DB<br/>━━━━━━<br/>TimescaleDB<br/>Time-Series"]:::data
+    end
+
+    %% ============================================================================
+    %% EXTERNAL SERVICES
+    %% ============================================================================
+    subgraph External["🌍 EXTERNAL SERVICES"]
+        CalcEngine["⚡ Calc Engine<br/>━━━━━━<br/>HPC Cluster<br/>gRPC"]:::external
+        Payment["💳 Payment<br/>━━━━━━<br/>Stripe API<br/>REST"]:::external
+        Notification["📧 Notification<br/>━━━━━━<br/>SendGrid<br/>SMTP"]:::external
+        Monitoring["👁️ Monitoring<br/>━━━━━━<br/>Datadog<br/>APM"]:::external
+    end
+
+    %% ============================================================================
+    %% OBSERVABILITY LAYER
+    %% ============================================================================
+    subgraph Observability["📈 OBSERVABILITY"]
+        Logs["📝 Logs<br/>━━━━<br/>ELK Stack"]:::metrics
+        Metrics["📊 Metrics<br/>━━━━<br/>Prometheus"]:::metrics
+        Traces["🔍 Traces<br/>━━━━<br/>Jaeger"]:::metrics
+        Alerts["🚨 Alerts<br/>━━━━<br/>PagerDuty"]:::metrics
+    end
+
+    %% ============================================================================
+    %% USER FLOWS
+    %% ============================================================================
+    User -->|"HTTPS"| UI
+    User -->|"HTTPS"| Mobile
+    UI -->|"REST"| API_GW
+    Mobile -->|"REST"| API_GW
+
+    %% ============================================================================
+    %% API GATEWAY ROUTING
+    %% ============================================================================
+    API_GW -->|"Auth Check"| Auth
+    API_GW -->|"Route"| SE_API
+
+    %% ============================================================================
+    %% APPLICATION FLOWS
+    %% ============================================================================
+    SE_API -->|"Delegate"| Orchestrator
+    Orchestrator -->|"Schedule"| JobService
+
+    Auth -->|"Cache Sessions"| Cache
+    SE_API -->|"Cache Results"| Cache
+
+    Orchestrator -->|"Publish Events"| EventBus
+    JobService -->|"Consume Events"| EventBus
+
+    JobService -->|"Queue Tasks"| Queue
+
+    %% ============================================================================
+    %% DATA FLOWS
+    %% ============================================================================
+    SE_API -->|"Write"| PrimaryDB
+    SE_API -->|"Read"| ReplicaDB
+    PrimaryDB -.->|"Replicate"| ReplicaDB
+
+    JobService -->|"Store Results"| SaSDB
+    Orchestrator -->|"Query History"| SaSDB
+
+    JobService -->|"Metrics"| Analytics
+
+    %% ============================================================================
+    %% EXTERNAL INTEGRATIONS
+    %% ============================================================================
+    JobService -->|"gRPC"| CalcEngine
+    SE_API -->|"REST"| Payment
+    EventBus -->|"Webhooks"| Notification
+
+    %% ============================================================================
+    %% OBSERVABILITY FLOWS
+    %% ============================================================================
+    Frontend -.->|"Logs"| Logs
+    Application -.->|"Logs"| Logs
+    Integration -.->|"Logs"| Logs
+
+    Application -.->|"Metrics"| Metrics
+    Integration -.->|"Metrics"| Metrics
+    DataTier -.->|"Metrics"| Metrics
+
+    Application -.->|"Traces"| Traces
+    External -.->|"Traces"| Traces
+
+    Metrics -->|"Threshold"| Alerts
+    Logs -->|"Errors"| Alerts
+
+    Monitoring -.->|"Observe All"| Logs
+    Monitoring -.->|"Observe All"| Metrics
+    Monitoring -.->|"Observe All"| Traces
+
+    %% ============================================================================
+    %% STYLING
+    %% ============================================================================
+    style Frontend fill:#dbeafe,stroke:#0284c7,stroke-width:3px,color:#0c4a6e
+    style Application fill:#ede9fe,stroke:#7c3aed,stroke-width:3px,color:#5b21b6
+    style Integration fill:#fce7f3,stroke:#db2777,stroke-width:3px,color:#831843
+    style DataTier fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#064e3b
+    style External fill:#fef3c7,stroke:#d97706,stroke-width:3px,color:#78350f
+    style Observability fill:#e0e7ff,stroke:#4f46e5,stroke-width:3px,color:#312e81
+

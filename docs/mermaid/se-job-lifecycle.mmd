@@ -1,0 +1,155 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#3b82f6','primaryTextColor':'#fff','primaryBorderColor':'#1e40af','lineColor':'#60a5fa','secondaryColor':'#10b981','tertiaryColor':'#8b5cf6','noteBkgColor':'#fef3c7','noteTextColor':'#78350f'}}}%%
+
+stateDiagram-v2
+    %% ============================================================================
+    %% SIMULATION JOB LIFECYCLE - STATE MACHINE
+    %% ============================================================================
+    %% Complete state transitions with error handling and retry logic
+    %% ============================================================================
+
+    [*] --> Submitted: 🚀 User submits<br/>simulation request
+
+    state Submitted {
+        [*] --> ValidatingInput
+        ValidatingInput --> ValidationPassed: ✅ Valid
+        ValidatingInput --> ValidationFailed: ❌ Invalid
+
+        ValidationPassed --> [*]
+    }
+
+    Submitted --> Queued: Validation passed<br/>Add to job queue
+    Submitted --> Rejected: ❌ Validation failed<br/>(bad input)
+
+    state Queued {
+        [*] --> WaitingForWorker
+        WaitingForWorker --> WorkerAssigned: 👷 Worker available
+
+        note right of WaitingForWorker
+            Queue Position: Priority-based
+            Max Wait Time: 5 minutes
+            Fallback: Scale workers
+        end note
+    }
+
+    Queued --> Scheduled: Worker assigned<br/>🎯 Job scheduled
+    Queued --> Timeout: ⏰ Queue timeout<br/>(>5 min wait)
+
+    state Scheduled {
+        [*] --> CheckingCache
+        CheckingCache --> CacheHit: 💾 Found in cache
+        CheckingCache --> CacheMiss: ❌ Not cached
+
+        CacheHit --> [*]
+    }
+
+    Scheduled --> Completed: 🎯 Cache hit<br/>Return cached result
+    Scheduled --> Running: 🏃 Cache miss<br/>Start execution
+
+    state Running {
+        [*] --> Initializing
+        Initializing --> LoadingData: Load scenario data
+        LoadingData --> ComputingCalc: 📊 Call Calc Service
+        ComputingCalc --> ProcessingResults: ⚙️ Process results
+        ProcessingResults --> SavingResults: 💾 Save to SaS
+        SavingResults --> CachingResults: 🗄️ Cache results
+        CachingResults --> NotifyingUser: 📧 Notify user
+        NotifyingUser --> [*]
+
+        note left of ComputingCalc
+            Timeout: 30 seconds
+            Retry: 3 attempts
+            Backoff: Exponential
+        end note
+    }
+
+    Running --> Completed: ✅ Success<br/>Results ready
+    Running --> Failed: ❌ Error occurred<br/>Check retry count
+    Running --> Cancelled: 🛑 User cancelled
+
+    state Failed {
+        [*] --> CheckRetryCount
+        CheckRetryCount --> CanRetry: Retries < 3
+        CheckRetryCount --> MaxRetriesExceeded: Retries ≥ 3
+
+        CanRetry --> IncrementRetry: Retry attempt++
+        IncrementRetry --> ApplyBackoff: Wait (2^n seconds)
+        ApplyBackoff --> [*]
+
+        note right of ApplyBackoff
+            Retry #1: 2s delay
+            Retry #2: 4s delay
+            Retry #3: 8s delay
+        end note
+    }
+
+    Failed --> Queued: 🔄 Retry scheduled<br/>(attempt < 3)
+    Failed --> PermanentFailure: ⛔ Max retries exceeded<br/>(attempt ≥ 3)
+
+    state PermanentFailure {
+        [*] --> LoggingError
+        LoggingError --> NotifyingSupport: 🚨 Alert ops team
+        NotifyingSupport --> ArchivingJob: 📦 Archive failed job
+        ArchivingJob --> [*]
+    }
+
+    state Completed {
+        [*] --> UpdateCache
+        UpdateCache --> PublishEvent: 📡 Publish completion
+        PublishEvent --> UpdateDatabase: 🗃️ Update job status
+        UpdateDatabase --> SendNotification: 📧 Email user
+        SendNotification --> [*]
+
+        note right of UpdateCache
+            Cache TTL: 1 hour
+            Storage: Redis
+            Key: sim-{hash}
+        end note
+    }
+
+    state Cancelled {
+        [*] --> CleanupResources
+        CleanupResources --> ReleaseLock: 🔓 Release locks
+        ReleaseLock --> UpdateStatus: Mark as cancelled
+        UpdateStatus --> [*]
+    }
+
+    Completed --> Archived: 🗄️ After 7 days<br/>Move to cold storage
+    PermanentFailure --> Archived: 🗄️ After 3 days<br/>Archive failure logs
+    Cancelled --> Archived: 🗄️ After 1 day<br/>Clean up data
+    Rejected --> Archived: 🗄️ Immediate<br/>No retry
+    Timeout --> Archived: 🗄️ After 1 day<br/>Queue expired
+
+    state Archived {
+        [*] --> MovingToS3
+        MovingToS3 --> CompressingData: 🗜️ Compress logs
+        CompressingData --> UpdatingMetadata: 📋 Update metadata
+        UpdatingMetadata --> DeletingFromActive: 🗑️ Delete from active DB
+        DeletingFromActive --> [*]
+
+        note left of MovingToS3
+            Storage: AWS S3 Glacier
+            Retention: 90 days
+            Access: On-demand restore
+        end note
+    }
+
+    Archived --> [*]: 🏁 Lifecycle complete
+
+    %% Emergency transitions
+    Running --> Cancelled: 🛑 User abort
+    Queued --> Cancelled: 🛑 User abort
+    Scheduled --> Cancelled: 🛑 User abort
+
+    %% System maintenance transitions
+    Running --> Paused: ⏸️ System maintenance
+    Paused --> Running: ▶️ Maintenance complete
+    Paused --> Cancelled: ❌ Maintenance timeout
+
+    state Paused {
+        note right of Paused
+            Max Pause: 30 minutes
+            Resources: Released
+            State: Persisted
+        end note
+    }
+

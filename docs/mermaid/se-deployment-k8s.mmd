@@ -1,0 +1,201 @@
+graph TB
+    %% ============================================================================
+    %% CLOUD DEPLOYMENT ARCHITECTURE - KUBERNETES
+    %% ============================================================================
+    %% Production-grade infrastructure with HA and scaling
+    %% ============================================================================
+
+    %% Define color palette
+    classDef internet fill:#3b82f6,stroke:#1e40af,stroke-width:4px,color:#fff,rx:15
+    classDef cdn fill:#06b6d4,stroke:#0891b2,stroke-width:3px,color:#fff,rx:12
+    classDef loadbalancer fill:#8b5cf6,stroke:#6d28d9,stroke-width:3px,color:#fff,rx:12
+    classDef ingress fill:#10b981,stroke:#059669,stroke-width:3px,color:#fff,rx:12
+    classDef pod fill:#f59e0b,stroke:#d97706,stroke-width:3px,color:#fff,rx:10
+    classDef service fill:#ec4899,stroke:#db2777,stroke-width:3px,color:#fff,rx:10
+    classDef storage fill:#6366f1,stroke:#4f46e5,stroke-width:3px,color:#fff,rx:10
+    classDef external fill:#ef4444,stroke:#dc2626,stroke-width:3px,color:#fff,rx:12
+
+    %% ============================================================================
+    %% INTERNET & CDN LAYER
+    %% ============================================================================
+    Internet["🌍 INTERNET<br/>━━━━━━━━━━<br/>Global Users<br/>HTTPS/TLS 1.3"]:::internet
+
+    subgraph CDN["☁️ CDN LAYER - Global Edge"]
+        CloudFlare["⚡ CloudFlare<br/>━━━━━━<br/>200+ PoPs<br/>DDoS Protection"]:::cdn
+        S3["📦 AWS S3<br/>━━━━━━<br/>Static Assets<br/>CDN Origin"]:::cdn
+    end
+
+    %% ============================================================================
+    %% LOAD BALANCING LAYER
+    %% ============================================================================
+    subgraph LB["⚖️ LOAD BALANCING"]
+        ALB["🔀 Application LB<br/>━━━━━━<br/>AWS ALB<br/>Multi-AZ"]:::loadbalancer
+        NLB["🔀 Network LB<br/>━━━━━━<br/>AWS NLB<br/>Layer 4"]:::loadbalancer
+    end
+
+    %% ============================================================================
+    %% KUBERNETES CLUSTER
+    %% ============================================================================
+    subgraph K8s["☸️ KUBERNETES CLUSTER - AWS EKS"]
+
+        %% Ingress Layer
+        subgraph Ingress["🚪 INGRESS"]
+            NginxIngress["🔷 Nginx Ingress<br/>━━━━━━<br/>Controller<br/>3 Replicas"]:::ingress
+            CertManager["🔐 Cert Manager<br/>━━━━━━<br/>Let's Encrypt<br/>Auto-Renewal"]:::ingress
+        end
+
+        %% Application Namespace
+        subgraph AppNS["📦 NAMESPACE: se-platform-prod"]
+
+            %% Frontend Pods
+            subgraph FrontendPods["🌐 FRONTEND DEPLOYMENT"]
+                UI1["📱 UI Pod 1<br/>━━━━<br/>React App<br/>0.5 CPU"]:::pod
+                UI2["📱 UI Pod 2<br/>━━━━<br/>React App<br/>0.5 CPU"]:::pod
+                UI3["📱 UI Pod 3<br/>━━━━<br/>React App<br/>0.5 CPU"]:::pod
+            end
+            UISvc["🔷 UI Service<br/>ClusterIP<br/>Port: 80"]:::service
+
+            %% Backend Pods
+            subgraph BackendPods["⚙️ BACKEND DEPLOYMENT"]
+                API1["🎮 API Pod 1<br/>━━━━<br/>Spring Boot<br/>2 CPU / 4GB"]:::pod
+                API2["🎮 API Pod 2<br/>━━━━<br/>Spring Boot<br/>2 CPU / 4GB"]:::pod
+                API3["🎮 API Pod 3<br/>━━━━<br/>Spring Boot<br/>2 CPU / 4GB"]:::pod
+            end
+            APISvc["🔷 API Service<br/>ClusterIP<br/>Port: 8080"]:::service
+
+            %% Worker Pods
+            subgraph WorkerPods["🏃 WORKER DEPLOYMENT"]
+                Worker1["⚙️ Worker Pod 1<br/>━━━━<br/>Job Runner<br/>4 CPU / 8GB"]:::pod
+                Worker2["⚙️ Worker Pod 2<br/>━━━━<br/>Job Runner<br/>4 CPU / 8GB"]:::pod
+            end
+            WorkerSvc["🔷 Worker Service<br/>Headless<br/>gRPC: 9090"]:::service
+
+            %% Autoscaling
+            HPA["📊 HPA<br/>━━━━<br/>Min: 3, Max: 20<br/>CPU: 70%"]:::service
+        end
+
+        %% Middleware Namespace
+        subgraph MiddlewareNS["📦 NAMESPACE: middleware"]
+
+            %% Redis
+            subgraph RedisCluster["💾 REDIS CLUSTER"]
+                Redis1["💎 Redis Master<br/>━━━━<br/>6GB RAM<br/>Write"]:::pod
+                Redis2["💎 Redis Replica 1<br/>━━━━<br/>6GB RAM<br/>Read"]:::pod
+                Redis3["💎 Redis Replica 2<br/>━━━━<br/>6GB RAM<br/>Read"]:::pod
+            end
+            RedisSvc["🔷 Redis Service<br/>Sentinel Mode<br/>Port: 6379"]:::service
+
+            %% Kafka
+            subgraph KafkaCluster["📡 KAFKA CLUSTER"]
+                Kafka1["📨 Kafka Broker 1<br/>━━━━<br/>10GB Storage"]:::pod
+                Kafka2["📨 Kafka Broker 2<br/>━━━━<br/>10GB Storage"]:::pod
+                Kafka3["📨 Kafka Broker 3<br/>━━━━<br/>10GB Storage"]:::pod
+            end
+            KafkaSvc["🔷 Kafka Service<br/>Headless<br/>Port: 9092"]:::service
+        end
+
+        %% Monitoring Namespace
+        subgraph MonitoringNS["📦 NAMESPACE: monitoring"]
+            Prometheus["📊 Prometheus<br/>━━━━<br/>Metrics Store<br/>15d Retention"]:::pod
+            Grafana["📈 Grafana<br/>━━━━<br/>Dashboards<br/>Visualizations"]:::pod
+            Jaeger["🔍 Jaeger<br/>━━━━<br/>Tracing<br/>Distributed"]:::pod
+        end
+    end
+
+    %% ============================================================================
+    %% DATABASE LAYER - AWS RDS
+    %% ============================================================================
+    subgraph RDS["🗄️ AWS RDS - MANAGED DATABASES"]
+        PrimaryDB["🗃️ Primary DB<br/>━━━━━━<br/>PostgreSQL 15<br/>db.r6g.2xlarge<br/>Multi-AZ"]:::storage
+        ReplicaDB["📋 Replica DB 1<br/>━━━━━━<br/>Read Only<br/>us-east-1a"]:::storage
+        ReplicaDB2["📋 Replica DB 2<br/>━━━━━━<br/>Read Only<br/>us-east-1b"]:::storage
+    end
+
+    %% ============================================================================
+    %% STORAGE LAYER
+    %% ============================================================================
+    subgraph Storage["💿 PERSISTENT STORAGE"]
+        EBS["📀 AWS EBS<br/>━━━━━━<br/>Block Storage<br/>gp3, 1TB"]:::storage
+        EFS["📁 AWS EFS<br/>━━━━━━<br/>Shared File System<br/>Multi-AZ"]:::storage
+    end
+
+    %% ============================================================================
+    %% EXTERNAL SERVICES
+    %% ============================================================================
+    subgraph ExtServices["🌍 EXTERNAL INTEGRATIONS"]
+        CalcCluster["⚡ Calc Cluster<br/>━━━━━━<br/>HPC Grid<br/>Private Link"]:::external
+        SaSAPI["🗂️ SaS API<br/>━━━━━━<br/>3rd Party Service<br/>REST/HTTPS"]:::external
+        DataDog["👁️ DataDog<br/>━━━━━━<br/>APM & Logs<br/>Agent Based"]:::external
+    end
+
+    %% ============================================================================
+    %% TRAFFIC FLOWS
+    %% ============================================================================
+    Internet -->|"HTTPS"| CloudFlare
+    CloudFlare -->|"Cache Hit"| S3
+    CloudFlare -->|"Cache Miss"| ALB
+
+    ALB --> NginxIngress
+    NLB --> KafkaSvc
+
+    NginxIngress --> UISvc
+    NginxIngress --> APISvc
+
+    UISvc --> UI1 & UI2 & UI3
+    APISvc --> API1 & API2 & API3
+    WorkerSvc --> Worker1 & Worker2
+
+    API1 & API2 & API3 --> RedisSvc
+    API1 & API2 & API3 --> KafkaSvc
+    Worker1 & Worker2 --> KafkaSvc
+
+    RedisSvc --> Redis1 & Redis2 & Redis3
+    KafkaSvc --> Kafka1 & Kafka2 & Kafka3
+
+    API1 & API2 & API3 --> PrimaryDB
+    API1 & API2 & API3 --> ReplicaDB
+    API1 & API2 & API3 --> ReplicaDB2
+
+    PrimaryDB -.->|"Async Replication"| ReplicaDB
+    PrimaryDB -.->|"Async Replication"| ReplicaDB2
+
+    Worker1 & Worker2 --> CalcCluster
+    Worker1 & Worker2 --> SaSAPI
+
+    %% Monitoring
+    Prometheus -.->|"Scrape"| API1 & API2 & API3
+    Prometheus -.->|"Scrape"| Worker1 & Worker2
+    Grafana -->|"Query"| Prometheus
+
+    API1 & API2 & API3 -.->|"Traces"| Jaeger
+    Worker1 & Worker2 -.->|"Traces"| Jaeger
+
+    K8s -.->|"Metrics & Logs"| DataDog
+
+    %% Storage
+    WorkerPods -.->|"Mount"| EBS
+    RedisCluster -.->|"Mount"| EFS
+
+    %% HPA
+    HPA -.->|"Scale"| BackendPods
+    HPA -.->|"Scale"| WorkerPods
+
+    %% ============================================================================
+    %% STYLING
+    %% ============================================================================
+    style CDN fill:#cffafe,stroke:#0891b2,stroke-width:3px,color:#164e63
+    style LB fill:#ede9fe,stroke:#6d28d9,stroke-width:3px,color:#5b21b6
+    style K8s fill:#f0fdf4,stroke:#059669,stroke-width:4px,color:#064e3b
+    style Ingress fill:#dbeafe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e
+    style AppNS fill:#fef3c7,stroke:#d97706,stroke-width:3px,color:#78350f
+    style MiddlewareNS fill:#fce7f3,stroke:#db2777,stroke-width:3px,color:#831843
+    style MonitoringNS fill:#e0e7ff,stroke:#4f46e5,stroke-width:3px,color:#312e81
+    style FrontendPods fill:#dbeafe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e
+    style BackendPods fill:#fae8ff,stroke:#a855f7,stroke-width:2px,color:#581c87
+    style WorkerPods fill:#fed7aa,stroke:#ea580c,stroke-width:2px,color:#7c2d12
+    style RedisCluster fill:#fecdd3,stroke:#f43f5e,stroke-width:2px,color:#881337
+    style KafkaCluster fill:#fce7f3,stroke:#ec4899,stroke-width:2px,color:#831843
+    style RDS fill:#d1fae5,stroke:#059669,stroke-width:3px,color:#064e3b
+    style Storage fill:#e0e7ff,stroke:#4f46e5,stroke-width:3px,color:#312e81
+    style ExtServices fill:#fee2e2,stroke:#dc2626,stroke-width:3px,color:#7f1d1d
+

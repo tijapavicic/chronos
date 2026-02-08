@@ -1,6 +1,74 @@
-# C4 Model Diagrams for Simulation Platform
+# 🎨 Mermaid Architecture Diagrams - Complete Gallery
 
-This folder contains C4 model diagrams using Mermaid syntax for the Simulation Platform.
+> **Professional visualization suite for the SE Simulation Platform**
+
+---
+
+## 🌟 Featured Diagram Gallery
+
+**👉 [View the Complete Diagram Gallery →](DIAGRAM-GALLERY.md)**
+
+The comprehensive documentation with all diagrams, usage guides, and rendering instructions.
+
+---
+
+## 📊 Quick Links to Diagrams
+
+### 🏗️ System Architecture Diagrams
+
+| Diagram | Description | Complexity | File |
+|---------|-------------|------------|------|
+| **Level 2 - Detailed** | Complete component view with all services | ⭐⭐⭐⭐⭐ | [se-flow-lvl-2.mmd](se-flow-lvl-2.mmd) |
+| **Level 3 - Simplified** | High-level system overview | ⭐⭐⭐ | [se-flow-lvl-3.mmd](se-flow-lvl-3.mmd) |
+| **Frontend Detail** | Frontend layer focus (landscape) | ⭐⭐ | [se-frontend-flow.mmd](se-frontend-flow.mmd) |
+| **Architecture Mindmap** | Interactive mindmap view | ⭐⭐⭐ | [se-architecture-mindmap.mmd](se-architecture-mindmap.mmd) |
+
+### 🔄 Flow & Interaction Diagrams
+
+| Diagram | Description | Complexity | File |
+|---------|-------------|------------|------|
+| **Sequence Diagram** | 30-step simulation lifecycle flow | ⭐⭐⭐⭐⭐ | [se-sequence-detailed.mmd](se-sequence-detailed.mmd) |
+| **State Machine** | Job lifecycle with all states | ⭐⭐⭐⭐ | [se-job-lifecycle.mmd](se-job-lifecycle.mmd) |
+
+### ☁️ Infrastructure & Operations
+
+| Diagram | Description | Complexity | File |
+|---------|-------------|------------|------|
+| **Kubernetes Deployment** | Full K8s architecture on AWS EKS | ⭐⭐⭐⭐⭐ | [se-deployment-k8s.mmd](se-deployment-k8s.mmd) |
+| **Executive Dashboard** | System overview with metrics | ⭐⭐⭐⭐ | [se-architecture-dashboard.mmd](se-architecture-dashboard.mmd) |
+
+### 📐 C4 Model Diagrams
+
+| Level | Description | File |
+|-------|-------------|------|
+| **Context** | Big picture - system landscape | [c4_context.mmd](c4_context.mmd) |
+| **Container** | Major applications/services | [c4_container.mmd](c4_container.mmd) |
+| **Component** | Internal components detail | [c4_component.mmd](c4_component.mmd) |
+
+---
+
+## 🎯 Choose Your Diagram
+
+### For Developers
+- **Getting Started**: [se-flow-lvl-3.mmd](se-flow-lvl-3.mmd) - Simple overview
+- **Deep Dive**: [se-flow-lvl-2.mmd](se-flow-lvl-2.mmd) - All components
+- **API Integration**: [se-sequence-detailed.mmd](se-sequence-detailed.mmd) - Request flow
+- **State Management**: [se-job-lifecycle.mmd](se-job-lifecycle.mmd) - Job states
+
+### For Architects
+- **System Design**: [se-architecture-mindmap.mmd](se-architecture-mindmap.mmd) - Complete view
+- **C4 Models**: Context → Container → Component progression
+- **Infrastructure**: [se-deployment-k8s.mmd](se-deployment-k8s.mmd) - Cloud architecture
+
+### For DevOps/SRE
+- **Deployment**: [se-deployment-k8s.mmd](se-deployment-k8s.mmd) - K8s setup
+- **Observability**: [se-architecture-dashboard.mmd](se-architecture-dashboard.mmd) - Metrics layer
+
+### For Executives
+- **Business Overview**: [se-architecture-dashboard.mmd](se-architecture-dashboard.mmd) - With metrics
+- **High-Level**: [se-flow-lvl-3.mmd](se-flow-lvl-3.mmd) - Simple view
+
+---
 
 ## C4 Model Levels
 
@@ -32,6 +100,8 @@ Zooms into the Simulation Orchestrator container to show its internal components
 - Event Publisher
 
 **Purpose**: Understand the internal structure of a specific container.
+
+---
 
 ## Rendering the Diagrams
 
