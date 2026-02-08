@@ -284,7 +284,55 @@ Complete state machine showing all possible job states and transitions.
 - Diagrams render automatically in Markdown files
 - Just embed with triple backticks and `mermaid` language tag
 
-### Export to PNG/SVG
+---
+
+## 📤 Export to Images & PDF
+
+### 🚀 Quick Start - Using the Provided Script
+
+We've included a comprehensive export script that handles all export scenarios!
+
+```bash
+# Make executable (first time only)
+chmod +x export-diagrams.sh
+
+# Install mermaid-cli
+./export-diagrams.sh setup
+
+# Export all diagrams to PNG
+./export-diagrams.sh all
+
+# Export to SVG
+./export-diagrams.sh svg
+
+# Export high-quality 4K images
+./export-diagrams.sh hq
+
+# Export key diagrams to all formats
+./export-diagrams.sh key
+
+# Interactive single file export
+./export-diagrams.sh single
+
+# See all options
+./export-diagrams.sh help
+```
+
+### 📋 Complete Export Cheat Sheet
+
+**👉 [View Complete Export Cheat Sheet →](EXPORT-CHEATSHEET.md)**
+
+Comprehensive guide covering:
+- ✅ Installation & setup
+- ✅ Basic & advanced commands
+- ✅ Batch export scripts
+- ✅ Themes & styling
+- ✅ Recommended dimensions
+- ✅ Troubleshooting
+- ✅ CI/CD integration
+- ✅ Pro tips & tricks
+
+### Manual Commands (Quick Reference)
 
 **Using Mermaid CLI**:
 ```bash
@@ -296,6 +344,9 @@ mmdc -i se-flow-lvl-2.mmd -o se-flow-lvl-2.png -w 3000 -H 2000
 
 # Export to SVG
 mmdc -i se-flow-lvl-2.mmd -o se-flow-lvl-2.svg
+
+# Export to PDF
+mmdc -i se-flow-lvl-2.mmd -o se-flow-lvl-2.pdf
 
 # Export all diagrams
 for file in *.mmd; do 
