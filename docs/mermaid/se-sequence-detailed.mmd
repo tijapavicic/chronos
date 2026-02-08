@@ -1,0 +1,123 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#1168bd','primaryTextColor':'#fff','primaryBorderColor':'#0a4d8c','lineColor':'#1a8fff','secondaryColor':'#087b7b','tertiaryColor':'#052E56','noteBkgColor':'#fef3c7','noteTextColor':'#78350f','noteBorderColor':'#f59e0b'}}}%%
+
+sequenceDiagram
+    autonumber
+
+    %% ============================================================================
+    %% PARTICIPANTS - SE PLATFORM SIMULATION FLOW
+    %% ============================================================================
+
+    actor User as 🎯 SE User
+    participant UI as 📱 User Interface
+    participant Auth as 🔐 Authorization
+    participant Controller as 🎮 SE Controller
+    participant Orchestrator as 🎼 Orchestrator
+    participant Scheduler as ⏰ Job Scheduler
+    participant Cache as 💾 Redis Cache
+    participant Runner as 🏃 Job Runner
+    participant EventBus as 📡 Event Bus
+    participant CalcClient as 📊 Calc Client
+    participant CalcService as 🖥️ Calc Service
+    participant SaSClient as 🚗 SaS SideCar
+    participant SaSRepo as 📦 SaS Repository
+    participant DB as 🗃️ SaS Database
+
+    %% ============================================================================
+    %% SIMULATION REQUEST FLOW
+    %% ============================================================================
+
+    rect rgb(219, 234, 254)
+        Note over User,Auth: 🌐 FRONTEND - User Authentication & Submission
+        User->>+UI: 1️⃣ Fill simulation form
+        UI->>+Auth: 2️⃣ POST /se/submit<br/>(credentials + payload)
+        Auth->>Auth: 3️⃣ Validate JWT token
+        alt Authentication Failed ❌
+            Auth-->>User: 401 Unauthorized
+        end
+        Auth->>+Controller: 4️⃣ Forward request<br/>(authenticated)
+    end
+
+    rect rgb(224, 242, 254)
+        Note over Controller,Cache: ⚙️ BACKEND - Orchestration & Cache Check
+        Controller->>+Orchestrator: 5️⃣ Process simulation request
+        Orchestrator->>+Cache: 6️⃣ Check for cached results<br/>key: sim-{hash}
+
+        alt Cache Hit 🎯
+            Cache-->>Orchestrator: Cached result found
+            Orchestrator-->>Controller: Return cached data
+            Controller-->>UI: 200 OK (cached)
+            UI-->>User: ⚡ Display results (instant)
+        else Cache Miss ❌
+            Cache-->>Orchestrator: No cached data
+            Orchestrator->>+Scheduler: 7️⃣ Schedule simulation job
+        end
+    end
+
+    rect rgb(254, 249, 195)
+        Note over Scheduler,Runner: 🔄 JOB EXECUTION - Async Processing
+        Scheduler->>Scheduler: 8️⃣ Queue job with priority
+        Scheduler->>+Runner: 9️⃣ Dispatch job to worker
+        Runner->>+EventBus: 🔟 Publish: JOB_STARTED
+
+        Controller-->>UI: 202 Accepted<br/>{jobId: "abc-123"}
+        UI-->>User: 📊 "Processing... track jobId"
+    end
+
+    rect rgb(250, 232, 255)
+        Note over Runner,CalcService: ⚡ EXTERNAL - Computation Service
+        Runner->>+CalcClient: 1️⃣1️⃣ Request computation<br/>gRPC call
+        CalcClient->>+CalcService: 1️⃣2️⃣ Execute heavy calculation
+        CalcService->>CalcService: 1️⃣3️⃣ Process data (5-30s)
+        CalcService-->>-CalcClient: 1️⃣4️⃣ Computation result
+        CalcClient-->>-Runner: 1️⃣5️⃣ Return result
+    end
+
+    rect rgb(204, 251, 241)
+        Note over Runner,DB: 🗂️ PERSISTENCE - Save to SaS Repository
+        Runner->>+SaSClient: 1️⃣6️⃣ Persist scenario & result
+        SaSClient->>+SaSRepo: 1️⃣7️⃣ POST /scenarios<br/>REST/JSON
+        SaSRepo->>+DB: 1️⃣8️⃣ INSERT INTO scenarios<br/>SQL transaction
+        DB-->>-SaSRepo: 1️⃣9️⃣ Record saved
+        SaSRepo-->>-SaSClient: 2️⃣0️⃣ 201 Created
+        SaSClient-->>-Runner: 2️⃣1️⃣ Success
+    end
+
+    rect rgb(224, 242, 254)
+        Note over Runner,Cache: 🎉 COMPLETION - Cache & Notify
+        Runner->>+Cache: 2️⃣2️⃣ Store result in cache<br/>TTL: 1 hour
+        Cache-->>-Runner: 2️⃣3️⃣ Cached
+        Runner->>+EventBus: 2️⃣4️⃣ Publish: JOB_COMPLETED
+        EventBus-->>Orchestrator: 2️⃣5️⃣ Event notification
+        EventBus-->>UI: 2️⃣6️⃣ WebSocket: Job done
+        UI-->>User: ✅ "Simulation completed!"
+    end
+
+    rect rgb(254, 226, 226)
+        Note over User,DB: 🔍 OPTIONAL - User queries results later
+        User->>+UI: Query results (GET /results/{jobId})
+        UI->>+Controller: Forward request
+        Controller->>+Orchestrator: Get job status
+        Orchestrator->>+SaSRepo: 2️⃣7️⃣ Query results
+        SaSRepo->>+DB: 2️⃣8️⃣ SELECT * FROM scenarios<br/>WHERE job_id = ?
+        DB-->>-SaSRepo: 2️⃣9️⃣ Result rows
+        SaSRepo-->>-Orchestrator: 3️⃣0️⃣ Scenario data
+        Orchestrator-->>-Controller: Result payload
+        Controller-->>-UI: 200 OK
+        UI-->>-User: 📊 Display full results
+    end
+
+    %% ============================================================================
+    %% ERROR HANDLING PATH
+    %% ============================================================================
+
+    rect rgb(254, 202, 202)
+        Note over Runner,EventBus: ❌ ERROR HANDLING - Job Failure Scenario
+        alt Job Fails After 3 Retries
+            Runner->>EventBus: Publish: JOB_FAILED
+            EventBus-->>Orchestrator: Error notification
+            Orchestrator->>Scheduler: Mark job as failed
+            EventBus-->>UI: WebSocket: Job failed
+            UI-->>User: ⚠️ "Simulation failed - contact support"
+        end
+    end
+

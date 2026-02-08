@@ -1,26 +1,43 @@
 flowchart LR
-%% Define styles
-    classDef frontendPallete fill: #052E56, stroke: #052e56, color: #fff
-    classDef personSe fill: #08427b, stroke: #052e56, color: #fff
-    classDef container fill: #1168bd, stroke: #226984, color: #fff
+%% ============================================================================
+%% SE FRONTEND DETAILED VIEW - LANDSCAPE LAYOUT
+%% ============================================================================
+%% Professional styling with emoji icons and modern design
+%% ============================================================================
 
-%% User
-    user([SE User<br/>Initiates flow]):::personSe
+%% Define professional color palette
+    classDef frontendPallete fill:#052E56,stroke:#0a4d8c,stroke-width:3px,color:#fff,rx:10,ry:10
+    classDef personSe fill:#08427b,stroke:#0a4d8c,stroke-width:4px,color:#fff,rx:15,ry:15,font-weight:bold
+    classDef container fill:#1168bd,stroke:#1a8fff,stroke-width:3px,color:#fff,rx:10,ry:10
 
-%% Frontend Subgraph in Landscape
-    subgraph seFrontend["SE Frontend - Hosting Platform"]
+%% ============================================================================
+%% USER ACTOR
+%% ============================================================================
+    user([🎯 SE User<br/>━━━━━━━━<br/>Initiates<br/>Request]):::personSe
+
+%% ============================================================================
+%% FRONTEND COMPONENTS - LANDSCAPE LAYOUT
+%% ============================================================================
+    subgraph seFrontend["🌐 SE FRONTEND - Presentation Layer"]
         direction LR
-        UI[User Interface<br/>User form]:::frontendPallete
-        authZ[Authorization<br/>Spring Boot REST]:::frontendPallete
-        saClient[SA Client<br/>Spring Boot REST<br/>Consumes SE endpoints]:::frontendPallete
+        UI["📱 User Interface<br/>━━━━━━━━<br/>React/Angular<br/>Forms & Dashboard"]:::frontendPallete
+        authZ["🔐 Authorization<br/>━━━━━━━━<br/>Spring Security<br/>OAuth2/JWT"]:::frontendPallete
+        saClient["🔌 SA Client<br/>━━━━━━━━<br/>REST Consumer<br/>API Integration"]:::frontendPallete
     end
 
-%% Backend API (simplified)
-    apiController[SE Controller<br/>Spring Boot REST<br/>Exposes SE endpoints]:::container
+%% Apply frontend styling
+    style seFrontend fill:#dbeafe,stroke:#0284c7,stroke-width:4px,color:#0c4a6e
 
-%% Relationships
-    user -->|User request| UI
-    UI -->|POST /SE<br/>REST/JSON| authZ
-    authZ -->|Authenticated request<br/>REST/JSON| saClient
-    saClient -->|POST /SE<br/>REST/JSON| apiController
+%% ============================================================================
+%% BACKEND API ENDPOINT
+%% ============================================================================
+    apiController["🎮 SE Controller<br/>━━━━━━━━<br/>@RestController<br/>Backend API Gateway"]:::container
+
+%% ============================================================================
+%% DATA FLOWS
+%% ============================================================================
+    user -->|"🚀 Submit"| UI
+    UI -->|"📤 POST /se<br/>REST/JSON"| authZ
+    authZ -->|"✅ Validated<br/>JWT Token"| saClient
+    saClient -->|"🔗 POST /se<br/>REST/JSON"| apiController
 

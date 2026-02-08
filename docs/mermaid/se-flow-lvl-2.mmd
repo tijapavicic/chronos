@@ -42,6 +42,10 @@ flowchart TB
         end
     end
 
+%% Apply custom subgraph styling
+    style sePlatform fill:#e8f4f8,stroke:#0369a1,stroke-width:4px,color:#0c4a6e
+    style seFrontend fill:#dbeafe,stroke:#0284c7,stroke-width:3px,color:#0c4a6e
+    style seBackend fill:#e0f2fe,stroke:#0284c7,stroke-width:3px,color:#0c4a6e
 
 %% ============================================================================
 %% EXTERNAL SYSTEMS - CALC PLATFORM
@@ -50,6 +54,9 @@ flowchart TB
         calcServer["🖥️ Calc Service<br/>━━━━━━━━<br/>Heavy Computation<br/>External Service"]:::external
         calcDb[("🗄️ Calc Database<br/>━━━━━━━━<br/>PostgreSQL<br/>Computation Data")]:::external
     end
+
+%% Apply calc platform styling
+    style calcSection fill:#fae8ff,stroke:#a855f7,stroke-width:4px,color:#581c87
 
 %% ============================================================================
 %% EXTERNAL SYSTEMS - SaS PLATFORM
@@ -60,6 +67,9 @@ flowchart TB
         sasRepo["📦 SaS Repository<br/>━━━━━━━━<br/>@Repository Layer<br/>Data Persistence Service"]:::sasPallete
         sasDb[("🗃️ SaS Database<br/>━━━━━━━━<br/>PostgreSQL<br/>Scenarios & Results")]:::sasPallete
     end
+
+%% Apply SaS platform styling
+    style sasSection fill:#ccfbf1,stroke:#14b8a6,stroke-width:4px,color:#134e4a
 
 
 %% ============================================================================
