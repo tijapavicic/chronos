@@ -1,0 +1,30 @@
+sequenceDiagram
+    title Smeagol Engine gRPC Flow
+    autonumber
+    participant FE as smeagol-engine-frontend
+    participant SE as smeagol-engine-backend
+    participant CE as calculation-engine
+    participant SRC as source database
+    participant OBJ as object storage
+    participant MQ as message broker
+    participant SDB as smeagol persistence DB
+
+    FE->>SE: POST /jobs (systemId, requestId, params)
+    SE->>SE: Idempotency check (systemId, requestId)
+    SE->>CE: gRPC StartCalculation(jobId, systemId, params)
+    CE-->>SE: ACCEPTED(jobId)
+    SE-->>FE: 202 Accepted(jobId)
+
+    CE->>SRC: Query via cursor/stream
+    SRC-->>CE: Rows stream (1,000,000 x 50)
+    CE->>OBJ: Write chunked Parquet + manifest
+    CE->>MQ: Publish JOB_COMPLETED(eventId, jobId, resultUris, checksums)
+
+    MQ-->>SE: Consume JOB_COMPLETED
+    SE->>OBJ: Read manifest + files
+    SE->>SDB: Bulk load to staging
+    SE->>SDB: Merge/upsert transaction
+    SE->>SE: Mark job COMPLETED
+
+    FE->>SE: GET /jobs/{jobId}
+    SE-->>FE: status=COMPLETED, rowCount=1000000

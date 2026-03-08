@@ -1,0 +1,51 @@
+%%{init: {'theme': 'base', 'themeVariables': {
+    'primaryColor': '#F0F4FF',
+    'primaryBorderColor': '#4C65C6',
+    'primaryTextColor': '#0F1A3E',
+    'lineColor': '#4C65C6',
+    'tertiaryColor': '#FFF7F0',
+    'tertiaryBorderColor': '#C65B4C'
+}}}%%
+flowchart LR
+    subgraph GRPC["gRPC orchestration"]
+        direction TB
+        grpc_ingest(["HTTPS POST /jobs\n(fe ➜ se)"]):::grpc
+        grpc_call(["gRPC StartCalculation\n(se ➜ ce)"]):::grpc
+        grpc_stream(["JDBC stream\n(ce ⇄ src)"]):::shared
+        grpc_store(["Parquet ➜ Object store\n(ce ➜ obj)"]):::shared
+        grpc_notify(["JOB_COMPLETED event\n(ce ➜ mq)"]):::shared
+        grpc_pull(["Bulk load ➜ sim DB\n(se ➜ sdb)"]):::grpc
+        grpc_status(["GET /jobs status\n(fe ⇄ se)"]):::grpc
+
+        grpc_ingest --> grpc_call --> grpc_stream --> grpc_store --> grpc_notify --> grpc_pull --> grpc_status
+    end
+
+    subgraph KAFKA["Kafka orchestration"]
+        direction TB
+        kafka_ingest(["HTTPS POST /jobs\n(fe ➜ se)"]):::kafka
+        kafka_request(["Produce job.requests\n(se ➜ kafka)"]):::kafka
+        kafka_consume(["Consume job.requests\n(kafka ➜ ce)"]):::kafka
+        kafka_stream(["JDBC stream\n(ce ⇄ src)"]):::shared
+        kafka_store(["Parquet ➜ Object store\n(ce ➜ obj)"]):::shared
+        kafka_complete(["Produce job.completed\n(ce ➜ kafka)"]):::kafka
+        kafka_back(["Consume job.completed\n(kafka ➜ se)"]):::kafka
+        kafka_load(["Bulk load ➜ sim DB\n(se ➜ sdb)"]):::kafka
+        kafka_status(["GET /jobs status\n(fe ⇄ se)"]):::kafka
+
+        kafka_ingest --> kafka_request --> kafka_consume --> kafka_stream --> kafka_store --> kafka_complete --> kafka_back --> kafka_load --> kafka_status
+    end
+
+    classDef grpc fill:#E3E9FF,stroke:#4C65C6,color:#0F1A3E
+    classDef kafka fill:#FFE7DF,stroke:#C65B4C,color:#2B110A
+    classDef shared fill:#EEF3F6,stroke:#6C7A89,color:#0F1F2B
+    classDef note fill:#FFFFFF,stroke:#4C65C6,color:#0F1A3E,stroke-dasharray: 5 3
+
+    diagram_title(["Smeagol Engine Sequencing: gRPC vs Kafka"]):::note
+
+    grpc_note(["Latency: low\nCoupling: tight (sync)\nBack-pressure: HTTP/gRPC flow control"]):::note
+    kafka_note(["Latency: higher (async)\nCoupling: loose via topics\nBack-pressure: consumer lag"]):::note
+
+    diagram_title === GRPC
+    diagram_title === KAFKA
+    grpc_call --- grpc_note
+    kafka_request --- kafka_note

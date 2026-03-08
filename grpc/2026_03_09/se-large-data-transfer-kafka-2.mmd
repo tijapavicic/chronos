@@ -1,0 +1,168 @@
+%%{init: {'theme':'base', 'themeVariables': {
+  'primaryColor':'#e8e0f5',
+  'primaryTextColor':'#2d1b69',
+  'primaryBorderColor':'#7c5cbf',
+  'lineColor':'#5b3fa6',
+  'secondaryColor':'#dff5f0',
+  'tertiaryColor':'#f0ebff',
+  'noteBkgColor':'#f0ebff',
+  'noteTextColor':'#2d1b69',
+  'noteBorderColor':'#7c5cbf',
+  'activationBorderColor':'#5b3fa6',
+  'activationBkgColor':'#d4c8f0',
+  'sequenceNumberColor':'#2d1b69',
+  'actorBkg':'#e8e0f5',
+  'actorBorder':'#7c5cbf',
+  'actorTextColor':'#2d1b69',
+  'actorLineColor':'#7c5cbf',
+  'loopTextColor':'#2d1b69',
+  'labelBoxBkgColor':'#d4c8f0',
+  'labelBoxBorderColor':'#7c5cbf',
+  'labelTextColor':'#2d1b69',
+  'signalColor':'#2d1b69',
+  'signalTextColor':'#2d1b69'
+}}}%%
+
+sequenceDiagram
+    autonumber
+
+    actor       User as 🎯 SE User
+    participant FE   as 📱 SE Frontend<br/>React 18 · Angular 17<br/>EventSource API
+    participant BE   as ⚙️ SE Backend<br/>Spring Boot 3 · Java 21<br/>KafkaTemplate + SseEmitter
+    participant KT1  as 📨 Kafka Topic<br/>smeagol.trigger<br/>12 partitions · 3 replicas
+    participant CE   as 🖥️ Calculation Engine<br/>Spring Boot 3 · Java 21<br/>@KafkaListener · KafkaTemplate
+    participant DB   as 🗄️ Source DB<br/>PostgreSQL 15<br/>server-side cursor
+    participant KT0  as 🗂️ Kafka Topic<br/>smeagol.db.raw<br/>12 partitions · 3 replicas · retention 1h
+    participant KT2  as 📬 Kafka Topic<br/>smeagol.results.chunks<br/>12 partitions · 3 replicas
+    participant SEDB as 🗃️ SE Database<br/>PostgreSQL 15 + TimescaleDB<br/>hypertable partitioned by time
+    participant KT3  as 📣 Kafka Topic<br/>smeagol.completed<br/>12 partitions · 3 replicas
+
+    %% PHASE 1
+    rect rgb(235, 245, 255)
+        Note over User,BE: 🌐 PHASE 1 — Trigger Smeagol · HTTP/1.1 REST · JSON · ~1 KB
+
+        User->>+FE: Click Run Smeagol<br/>system_id = SYS-042
+
+        FE->>+BE: POST /api/v1/smeagols HTTP/1.1<br/>Content-Type: application/json<br/>Authorization: Bearer eyJhbGci...<br/>body: system_id=SYS-042 · params=... · ~1 KB total
+
+        Note right of FE: REST+JSON still correct here:<br/>- Tiny 1 KB control message — no Kafka overhead needed<br/>- Browser fetch API natively speaks HTTP/1.1<br/>- Synchronous 202 response gives FE the job_id immediately<br/>- Kafka would require polling or SSE anyway to return job_id<br/>- Rule: REST for synchronous handshake · Kafka for async work
+
+        BE-->>FE: HTTP 202 Accepted<br/>job_id=JOB-7f3a · status=QUEUED<br/>progress_url=/api/v1/smeagols/JOB-7f3a/progress
+
+        FE-->>User: Job accepted — connecting SSE progress stream
+    end
+
+    %% PHASE 2
+    rect rgb(255, 235, 245)
+        Note over BE,KT1: 📨 PHASE 2 — Publish Trigger · KafkaTemplate · topic smeagol.trigger · key=system_id · ~200 B
+
+        BE->>+KT1: KafkaTemplate.send to smeagol.trigger key=SYS-042<br/>SmeagolTriggerEvent Avro<br/>  job_id       = JOB-7f3a<br/>  system_id    = SYS-042<br/>  triggered_at = 2026-03-07<br/>acks=all · enable.idempotence=true · ~200 B payload
+
+        Note right of BE: WHY Kafka here and NOT gRPC unary:<br/>- BE does NOT wait for CE — fire and move on<br/>- If CE is down message waits safely in topic log<br/>  gRPC would return UNAVAILABLE immediately<br/>- Multiple CE instances auto-balanced across partitions<br/>- acks=all: leader + all ISR replicas confirmed<br/>- key=system_id: ordering guaranteed per system<br/>- Retention 7 days — replay if CE had a bug
+
+        KT1-->>-BE: Kafka broker ACK — offset committed
+
+        BE-->>FE: SSE event: status=PROCESSING · job queued in Kafka
+    end
+
+    %% PHASE 3
+    rect rgb(230, 248, 240)
+        Note over KT1,KT0: 🗃️ PHASE 3 — CE consumes trigger · reads Source DB via JDBC cursor · produces raw rows to smeagol.db.raw
+
+        KT1->>+CE: @KafkaListener consumerGroup=calculation-engine<br/>topic: smeagol.trigger · max.poll.records=1<br/>enable.auto.commit=false · isolation.level=read_committed<br/>Receives: SmeagolTriggerEvent job_id=JOB-7f3a system_id=SYS-042
+
+        Note right of CE: Critical Kafka consumer settings for CE:<br/>- max.poll.records=1: one trigger per poll — each job is heavy<br/>- max.poll.interval.ms=600000: 10 min — must exceed longest job<br/>  CRITICAL: if job exceeds max.poll.interval.ms<br/>  Kafka marks CE dead · rebalance · trigger reprocessed<br/>- session.timeout.ms=300000: 5 min heartbeat timeout<br/>- enable.auto.commit=false: manual ack after all raw rows produced<br/>- isolation.level=read_committed: skip uncommitted messages
+
+        CE->>+DB: JDBC PreparedStatement<br/>connection.setAutoCommit = false — required for PG cursor<br/>stmt.setFetchSize = 5000<br/>SQL: SELECT id col_01..col_50 FROM source_data<br/>     WHERE system_id=SYS-042 ORDER BY row_seq<br/>PostgreSQL opens server-side portal — holds cursor in DB
+
+        Note right of CE: JDBC cursor — constant O[5000] heap:<br/>- Plain SELECT: 120-150 MB heap spike before first row<br/>- setFetchSize 5000 = PG server-side portal<br/>  DB sends 5000 rows · CE calls rs.next · DB sends next 5000<br/>- @Transactional readOnly=true + Stream of Row<br/>- Connection held open — tune HikariCP maximumPoolSize
+
+        DB-->>CE: JDBC ResultSet streaming<br/>200 fetch round-trips x 5000 rows each
+
+        loop 200 iterations — one Kafka message per 5000 rows read from DB
+            CE->>+KT0: KafkaTemplate.send to smeagol.db.raw key=JOB-7f3a<br/>RawDataChunkEvent Avro<br/>  job_id      = JOB-7f3a<br/>  chunk_index = 0 to 199<br/>  rows        = 5000 raw Row objects · ~75-120 KB per message<br/>  schema_id   = 10 — Confluent Schema Registry<br/>acks=all · compression.type=snappy · linger.ms=0
+
+            Note right of CE: WHY produce raw rows to Kafka and NOT process inline:<br/>- Decouples DB read phase from calculation phase<br/>  read speed and calc speed can differ — broker absorbs the gap<br/>- Raw rows replayable if calculation logic has a bug<br/>  fix bug · reset consumer offset · reprocess without re-reading DB<br/>- Multiple CE worker pods consume raw chunks in parallel<br/>- topic retention 1h: short-lived staging area only<br/>- COST: extra broker hop adds ~5-50 ms latency per chunk<br/>- COST: 200 messages x 3 replicas = 600 broker disk writes
+
+            KT0-->>-CE: Broker ACK per raw chunk
+        end
+
+        CE->>KT0: Final marker RawDataChunkEvent chunk_index=199 is_last=true
+        CE->>KT1: Manual commit Acknowledgment.acknowledge on smeagol.trigger<br/>Only after all 200 raw chunks ACKed by broker
+        DB-->>-CE: JDBC cursor closed · connection returned to HikariCP pool
+    end
+
+    %% PHASE 4
+    rect rgb(255, 235, 245)
+        Note over KT0,KT2: 🚀 PHASE 4 — CE consumes smeagol.db.raw · applies calculation · produces to smeagol.results.chunks
+
+        KT0->>+CE: @KafkaListener consumerGroup=calculation-engine-processor<br/>topic: smeagol.db.raw · batch mode · max.poll.records=1<br/>enable.auto.commit=false · isolation.level=read_committed<br/>Receives: RawDataChunkEvent job_id=JOB-7f3a chunk_index=N rows x5000
+
+        Note right of CE: CE consumes its OWN raw topic — two listener groups on CE:<br/>- calculation-engine: reads DB · produces to smeagol.db.raw<br/>- calculation-engine-processor: reads raw · calculates · produces results<br/>- Separation allows independent scaling of ingest vs compute pods<br/>- If calculation logic crashes: reset offset on smeagol.db.raw<br/>  reprocess without touching Source DB at all<br/>- Stateless calculation: each chunk processed independently
+
+        loop 200 chunk messages consumed from smeagol.db.raw
+            CE->>CE: Apply calculation logic on 5000 raw rows<br/>normalise · aggregate · apply formula · enrich<br/>Output: 5000 CalculatedRow objects per chunk
+
+            CE->>+KT2: KafkaTemplate.send to smeagol.results.chunks key=JOB-7f3a<br/>SmeagolChunkEvent Avro<br/>  job_id          = JOB-7f3a<br/>  chunk_index     = 0 to 199<br/>  total_chunks    = 200<br/>  calculated_rows = 5000 CalculatedRow objects · ~75-120 KB<br/>  schema_id       = 42 — Confluent Schema Registry<br/>acks=all · compression.type=snappy
+
+            Note right of CE: WHY Kafka for result chunks and NOT gRPC streaming:<br/>- BE may be busy or scaled down — chunks wait in topic<br/>- Multiple BE instances can each consume a subset of chunks<br/>  gRPC streaming is pinned to one BE connection<br/>- Chunk replay: if BE crashes it resumes from last offset<br/>  gRPC stream lost on disconnect = full re-trigger needed<br/>- Avro + Schema Registry: schema evolution without breaking consumers<br/>- snappy compression: ~15-25 MB total vs 120 MB uncompressed JSON
+
+            KT2-->>-CE: Broker ACK per result chunk
+            CE->>KT0: Manual commit on smeagol.db.raw after result chunk ACKed
+        end
+
+        CE->>KT2: Final marker SmeagolChunkEvent chunk_index=199 is_last=true
+    end
+
+    %% PHASE 5
+    rect rgb(230, 248, 240)
+        Note over KT2,SEDB: 💾 PHASE 5 — Consume Result Chunks + Bulk Persist · @KafkaListener · JDBC batch insert · 5000 rows per batch
+
+        KT2->>+BE: @KafkaListener consumerGroup=se-backend<br/>topic: smeagol.results.chunks · batch mode<br/>enable.auto.commit=false · max.poll.records=1<br/>Receives: SmeagolChunkEvent job_id=JOB-7f3a chunk_index=N
+
+        loop 200 result chunk messages consumed from Kafka
+            BE->>+SEDB: JdbcTemplate.batchUpdate<br/>INSERT INTO sim_results<br/>  id system_id job_id col_01..col_50 created_at<br/>VALUES x5000 per batch via PreparedStatement<br/>@Transactional propagation=REQUIRES_NEW — new TX per chunk<br/>INSERT ON CONFLICT DO NOTHING — idempotent for at-least-once<br/>PostgreSQL: single WAL flush per batch
+
+            Note right of BE: WHY per-chunk transaction + idempotent INSERT:<br/>- Failure in chunk 150: rolls back rows 745001-750000 only<br/>- Kafka offset NOT committed until INSERT succeeds<br/>  Kafka redelivers failed chunk on BE restart automatically<br/>- ON CONFLICT DO NOTHING: safe if chunk redelivered<br/>- TimescaleDB hypertable: append-only to active 1-day chunk<br/>  closed chunks auto-compressed · no index contention<br/>- Tune: rewriteBatchedStatements=true in JDBC URL<br/>  spring.datasource.hikari.maximumPoolSize min 5
+
+            SEDB-->>-BE: Batch ACK — affected rows = 5000
+            BE->>KT2: Manual commit Acknowledgment.acknowledge<br/>offset advanced only after successful INSERT
+        end
+
+        Note over KT2,SEDB: Total: 200 x 5000 = 1 000 000 rows committed<br/>Throughput: ~50K-100K rows/sec on local NVMe<br/>Kafka offset trail = full audit of which chunks persisted
+    end
+
+    %% PHASE 6
+    rect rgb(235, 245, 255)
+        Note over FE,KT3: 📡 PHASE 6 — Progress Push + Completion Event · SSE to FE · Kafka to downstream
+
+        Note over FE,BE: BE tracks chunk_index per job_id in ProgressRegistry.<br/>After each successful INSERT: emits SSE progress event to FE.<br/>When is_last=true chunk inserted: emits done + publishes to smeagol.completed.
+
+        BE-->>FE: SSE text/event-stream · Content-Type: text/event-stream<br/>Cache-Control: no-cache · X-Accel-Buffering: no<br/>event: progress  data: job_id=JOB-7f3a pct=0   rows_done=0       chunk=0 of 200<br/>event: progress  data: job_id=JOB-7f3a pct=50  rows_done=500000  chunk=100 of 200<br/>event: progress  data: job_id=JOB-7f3a pct=100 rows_done=1000000 chunk=200 of 200
+
+        BE->>+KT3: KafkaTemplate.send to smeagol.completed key=JOB-7f3a<br/>SmeagolCompletedEvent Avro<br/>  job_id         = JOB-7f3a<br/>  system_id      = SYS-042<br/>  rows_persisted = 1000000<br/>  duration_ms    = 21340<br/>  completed_at   = 2026-03-07<br/>acks=all · retention 30 days
+
+        Note right of BE: WHY smeagol.completed topic:<br/>- Fan-out to Analytics + Notification + Audit in one publish<br/>- All consumer groups independent — failure in one does not affect others<br/>- 30-day retention: replay for new downstream services added later<br/>- gRPC alternative = 3 outbound calls · tight coupling · cascading failure
+
+        KT3-->>-BE: Broker ACK
+
+        BE-->>-FE: SSE event: done<br/>data: job_id=JOB-7f3a rows_persisted=1000000 duration_ms=21340 status=COMPLETED<br/>FE calls eventSource.close
+
+        FE-->>User: Dashboard updated — 1 000 000 rows persisted in 21.3 s
+    end
+
+    %% PHASE 7
+    rect rgb(248, 240, 255)
+        Note over KT3,SEDB: 🔀 PHASE 7 — Fan-out · smeagol.completed consumed by independent consumer groups
+
+        KT3-->>BE: consumerGroup=analytics-service<br/>@KafkaListener topic=smeagol.completed<br/>Triggers: aggregate KPIs · update dashboards · store in ClickHouse
+
+        Note right of KT3: Each consumer group has its OWN offset pointer.<br/>All groups receive the SAME message independently.<br/>Failure in one group does NOT affect others.<br/>New group added later: replay from offset 0<br/>= backfill historical data — impossible with gRPC.
+
+        KT3-->>BE: consumerGroup=notification-service<br/>@KafkaListener topic=smeagol.completed<br/>Triggers: send email · Slack alert · SMS if SLA breached
+
+        KT3-->>SEDB: consumerGroup=audit-service<br/>@KafkaListener topic=smeagol.completed<br/>INSERT INTO audit_log job_id duration_ms completed_at actor_id
+
+        Note over KT3,SEDB: Kafka topic chain summary:<br/>smeagol.trigger        BE to CE · retention 7 days<br/>smeagol.db.raw         CE ingest to CE processor · retention 1 hour<br/>smeagol.results.chunks CE to BE · retention 6 hours<br/>smeagol.completed      BE to all downstream · retention 30 days
+    end
+

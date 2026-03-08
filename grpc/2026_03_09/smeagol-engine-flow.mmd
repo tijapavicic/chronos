@@ -1,0 +1,34 @@
+%% Smeagol engine end-to-end flow
+flowchart LR
+    subgraph Client_Tier [Client Tier]
+        FE["Smeagol-engine frontend\nReact SPA + Auth"]
+    end
+
+    subgraph Control_API [Control Plane]
+        SE["Smeagol-engine backend\nSpring Boot REST /jobs"]
+        K["Kafka cluster\n(job.requests / job.completed)"]
+    end
+
+    subgraph Compute [Calculation Engine]
+        CE["Calculation-engine service\nVert.x worker pool"]
+    end
+
+    subgraph Data_Sources [Source Systems]
+        SRC[("Source DB\nJDBC cursor stream")]
+    end
+
+    subgraph Durable_Artifacts [Durable Artifacts]
+        OBJ[("Object storage\nParquet chunks + manifest")]
+        SDB[("Smeagol DB\nPostgreSQL staging + prod tables")]
+    end
+
+    FE -- "HTTPS POST /jobs\n≤512 KB JSON payload" --> SE
+    SE -- "Produce job.requests\nAvro/Proto schema, <64 KB" --> K
+    K -- "Consume job.requests\nconsumer group=calc-engine" --> CE
+    CE -- "SQL stream (1M rows × 50 cols)\nchunk=20k rows" --> SRC
+    CE -- "Write 256 MB Parquet blocks\n+ checksum manifest" --> OBJ
+    CE -- "Emit job.completed\n(result URIs, row count)" --> K
+    K -- "Fan-out job.completed\ntopic partitions=6" --> SE
+    SE -- "Fetch Parquet + manifest\nrange GET + checksum" --> OBJ
+    SE -- "Bulk load COPY\nto staging, then merge" --> SDB
+    SE -- "WebSocket/HTTP status\n(state, rowCount, metrics)" --> FE

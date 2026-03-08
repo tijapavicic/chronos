@@ -1,0 +1,53 @@
+@startuml
+title Detailed Smeagol Flow
+
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam shadowing false
+skinparam defaultFontName "Verdana"
+
+skinparam participant {
+    BackgroundColor<<Frontend>> LightBlue
+    BorderColor<<Frontend>> Blue
+    BackgroundColor<<Backend>> LightGreen
+    BorderColor<<Backend>> Green
+    BackgroundColor<<Service>> LightYellow
+    BorderColor<<Service>> Orange
+    BackgroundColor<<Database>> LightGray
+    BorderColor<<Database>> Black
+}
+
+participant "SimFront" as SimFront <<Frontend>>
+participant "SimBack" as SimBack <<Backend>>
+participant "CalcEngine" as CalcEngine <<Service>>
+participant "SaSViya" as SaSViya <<Service>>
+database "DB" as DB <<Database>>
+
+SimFront -> SimBack: POST /api/smeagol/run \n{ parameters: { ... } }
+activate SimBack
+
+note right of SimBack: Validate Request Parameters
+
+SimBack -> CalcEngine: POST /calculate \n{ input: parameters }
+activate CalcEngine
+note right of CalcEngine: Perform Complex Math
+CalcEngine --> SimBack: 200 OK \n{ results: { ... } }
+deactivate CalcEngine
+
+SimBack -> SaSViya: POST /analyze/risk \n{ calcResults: ... }
+activate SaSViya
+note right of SaSViya: Run Risk Models
+SaSViya --> SimBack: 200 OK \n{ riskScore: 95.5 }
+deactivate SaSViya
+
+note right of SimBack: Aggregate Results
+
+SimBack -> DB: INSERT INTO smeagol_runs \n(params, results, risk)
+activate DB
+DB --> SimBack: ID: 12345
+deactivate DB
+
+SimBack --> SimFront: 200 OK \n{ id: 12345, status: "COMPLETED" }
+deactivate SimBack
+
+@enduml

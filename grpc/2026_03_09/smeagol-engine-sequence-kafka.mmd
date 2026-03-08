@@ -1,0 +1,37 @@
+%% kafka sequence diagram
+sequenceDiagram
+    title Smeagol Engine Kafka Flow
+    autonumber
+    participant FE as smeagol-engine-frontend
+    participant SE as smeagol-engine-backend
+    participant MQ as Kafka cluster
+    participant CE as calculation-engine
+    participant SRC as source database
+    participant OBJ as object storage
+    participant SDB as smeagol persistence DB
+
+    FE->>SE: POST /jobs (systemId, requestId, params)
+    SE->>SE: Idempotency check (systemId, requestId)
+    SE->>MQ: Produce JOB_REQUEST(jobId, systemId, params)
+    MQ-->>CE: Consume JOB_REQUEST (consumer group calc-engine)
+    CE-->>SE: ACK via JOB_ACCEPTED(jobId) topic
+    SE-->>FE: 202 Accepted(jobId)
+
+    CE->>SRC: Query via cursor/stream
+    SRC-->>CE: Rows stream (1,000,000 x 50)
+    CE->>OBJ: Write chunked Parquet + manifest
+    CE->>MQ: Produce JOB_COMPLETED(eventId, jobId, resultUris, checksums)
+
+    MQ-->>SE: Consume JOB_COMPLETED
+    SE->>OBJ: Read manifest + files
+    SE->>SDB: Bulk load to staging
+    SE->>SDB: Merge/upsert transaction
+    SE->>SE: Mark job COMPLETED
+
+    FE->>SE: GET /jobs/{jobId}
+    SE-->>FE: status=COMPLETED, rowCount=1000000
+
+%% Kafka takeaways vs gRPC
+%% - Kafka decouples SE and CE with replayable topics, smoothing bursts and enabling failover at the cost of higher end-to-end latency.
+%% - Message contracts need explicit versioning and schema governance (e.g., Schema Registry) whereas gRPC enforces proto contracts at compile time.
+%% - Back-pressure handled through consumer lag/partitions rather than synchronous flow control, so operational tooling (lag monitors, retention settings) becomes critical.
