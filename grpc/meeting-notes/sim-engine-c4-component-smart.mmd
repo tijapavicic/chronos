@@ -1,0 +1,42 @@
+flowchart TB
+    classDef user fill:#f8fafc,stroke:#0f172a,color:#0f172a,font-weight:bold
+    classDef frontend fill:#dbeafe,stroke:#1e3a8a,color:#0f172a,font-weight:bold
+    classDef backend fill:#e0e7ff,stroke:#312e81,color:#111827,font-weight:bold
+    classDef orchestrator fill:#ede9fe,stroke:#5b21b6,color:#1f2937,font-weight:bold
+    classDef calc fill:#fef3c7,stroke:#92400e,color:#1f2937,font-weight:bold
+    classDef db fill:#e2e8f0,stroke:#1f2937,color:#0f172a,font-weight:bold
+    classDef queue fill:#ffe4e6,stroke:#9f1239,color:#1f2937,font-weight:bold
+    classDef future fill:#cbd5f5,stroke:#3730a3,color:#0f172a,font-weight:bold
+
+    subgraph Users
+        Modeler["Modeler / Analyst"]:::user
+    end
+
+    subgraph Phase_1_Current
+        FE["Sim-Engine Frontend\nComponent"]:::frontend
+        BE["Sim-Engine Backend\nAPI Gateway"]:::backend
+        ORCH["Snapshot Orchestrator\n(Job controller / queue)"]:::orchestrator
+        CE["Calculation Engine\nComponent"]:::calc
+        ODB["Operational DB\n(OLTP)"]:::db
+        SDB["Snapshot DB\n(Analytics store)"]:::db
+    end
+
+    subgraph Phase_2_Future
+        KQ["Kafkaesque Queue\n(Topic fan-out)"]:::queue
+        P2DB["Phase-2 Target DB\n(Data lake / downstream)"]:::future
+    end
+
+    Modeler -->|"Browser / HTTPS"| FE
+    FE -->|"HTTPS / REST"| BE
+    BE -->|"Job command\n gRPC + Kafka topic"| ORCH
+    ORCH -->|"gRPC streaming\nSnapshot job"| CE
+    CE -->|"JDBC / SQL streaming"| ODB
+    ODB -->|"Chunked SQL result"| CE
+    CE -->|"Bulk insert\n1M rows × 50 columns"| SDB
+    ORCH -.->|"Event / callback"| BE
+    BE -->|"WebSocket / SSE\nJob status"| FE
+    Modeler -.->|"SQL / BI"| SDB
+    BE -->|"JDBC read replica"| SDB
+    BE -->|"Kafka (Avro/Proto)"| KQ
+    KQ -->|"Kafka Connect / Sink"| P2DB
+

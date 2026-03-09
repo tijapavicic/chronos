@@ -1,0 +1,44 @@
+flowchart TB
+    classDef frontend fill:#dbeafe,stroke:#1e3a8a,color:#0f172a,font-weight:bold
+    classDef backend fill:#e0e7ff,stroke:#312e81,color:#111827,font-weight:bold
+    classDef calc fill:#fef3c7,stroke:#92400e,color:#1f2937,font-weight:bold
+    classDef db fill:#e2e8f0,stroke:#1f2937,color:#0f172a,font-weight:bold
+    classDef queue fill:#ffe4e6,stroke:#9f1239,color:#1f2937,font-weight:bold
+    classDef future fill:#cbd5f5,stroke:#3730a3,color:#0f172a,font-weight:bold
+    classDef user fill:#f8fafc,stroke:#0f172a,color:#0f172a,font-weight:bold
+
+    subgraph Phase_1_Current
+        FE["Sim-Engine Frontend\nComponent"]:::frontend
+        BE["Sim-Engine Backend\nComponent"]:::backend
+        CE["Calculation Engine\nComponent"]:::calc
+        ODB[("Operational DB\nContainer")]:::db
+        SDB[("Snapshot DB\nContainer")]:::db
+    end
+
+    subgraph Phase_2_Future
+        KQ["Kafkaesque Queue\nComponent"]:::queue
+        P2DB[("Phase-2 Target DB\nContainer")]:::future
+    end
+
+    Modeler["Modeler / Analyst"]:::user
+
+    Modeler -.->|"SQL client / BI"| SDB
+    Modeler -->|"Browser / HTTPS"| FE
+    FE -->|"HTTPS / REST"| BE
+    BE -->|"gRPC / mTLS"| CE
+    CE -->|"JDBC / SQL streaming"| ODB
+    CE -->|"Batch insert\n1M rows × 50 columns"| SDB
+    BE -->|"JDBC read replica"| SDB
+    BE -->|"Kafka (Avro/Proto)"| KQ
+    KQ -->|"Kafka Connect / Sink"| P2DB
+
+    %% feedback/event loop
+    ODB -->|"Chunked SQL result"| CE
+    CE -->|"Event / Webhook"| BE
+
+    class FE frontend
+    class BE backend
+    class CE calc
+    class ODB,SDB db
+    class KQ queue
+    class P2DB future

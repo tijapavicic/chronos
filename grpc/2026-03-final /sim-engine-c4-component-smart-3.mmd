@@ -1,0 +1,77 @@
+flowchart TB
+    classDef user        fill:#f1f5f9,stroke:#0f172a,color:#0f172a,font-weight:bold
+    classDef frontend    fill:#dbeafe,stroke:#1e3a8a,color:#0f172a,font-weight:bold
+    classDef backend     fill:#e0e7ff,stroke:#312e81,color:#111827,font-weight:bold
+    classDef orchestrator fill:#ede9fe,stroke:#5b21b6,color:#1f2937,font-weight:bold
+    classDef calc        fill:#fef3c7,stroke:#92400e,color:#1f2937,font-weight:bold
+    classDef oltp        fill:#dcfce7,stroke:#14532d,color:#052e16,font-weight:bold
+    classDef analytics   fill:#e2e8f0,stroke:#1e3a8a,color:#0f172a,font-weight:bold
+    classDef queue       fill:#ffe4e6,stroke:#9f1239,color:#1f2937,font-weight:bold
+    classDef future      fill:#cbd5f5,stroke:#3730a3,color:#120078,font-weight:bold
+    classDef note        fill:#fffbeb,stroke:#d97706,color:#78350f,font-style:italic
+
+    %% ── External actors ──────────────────────────────────────────────────────
+    subgraph Actors["👤 External Actors"]
+        direction LR
+        Modeler["Modeler\n─────────────────\nRuns simulations\nQueries results via simul-frontend"]:::user
+    end
+
+    %% ── Phase 1 ──────────────────────────────────────────────────────────────
+    subgraph Phase1["⚙️  Phase 1 — Current Year (2026)"]
+        direction TB
+
+        subgraph UI_Layer["Presentation Layer"]
+            FE["Sim-Engine Frontend\n─────────────────\n submission form\nReal-time status (SSE)"]:::frontend
+        end
+
+        subgraph App_Layer["Application Layer"]
+            BE["Sim-Engine Backend\n─────────────────\nSpring Boot · API Gateway\nAuth · Rate-limiting\nJob lifecycle management"]:::backend
+            ORCH["Snapshot Orchestrator\n─────────────────\nSpring Batch / Argo Workflows\nJob scheduling & retry\nCheckpoint management"]:::orchestrator
+        end
+
+        subgraph Compute_Layer["Compute Layer"]
+            CE["Calculation Engine\n─────────────────\n JVM Service has this logic implemented for regular flows"]:::calc
+        end
+
+        subgraph Data_Layer["Data Layer"]
+            ODB[("Operational DB\n─────────────────\nOLTP · PostgreSQL\nSource of record\nRead via streaming cursor")]:::oltp
+            SDB[("Snapshot DB\n─────────────────\nAnalytics RDBMS / Parquet\nPartitioned by system-id + date\n~450 MB per snapshot")]:::analytics
+        end
+    end
+
+    %% ── Phase 2 ──────────────────────────────────────────────────────────────
+    subgraph Phase2["🔮  Phase 2 — Future Scope (not in 2026 roadmap)"]
+        direction LR
+        KQ["Kafkaesque Queue\n─────────────────\nKafka · compacted topic\nAvro schema registry\nIdempotent producer"]:::queue
+        P2DB[("Phase-2 Target DB\n─────────────────\nData Lake / Iceberg\nDownstream analytics\nManaged by consumer team")]:::future
+    end
+
+    %% ── Relationships ─────────────────────────────────────────────────────────
+    Modeler      -->|"Browser / HTTPS TLS 1.3"| FE
+%%    Modeler      -.->|"SQL / BI tool\nread-only access"| SDB
+
+    FE           -->|"HTTPS / REST\nSubmit system-id + params"| BE
+    BE           -->|"WebSocket / SSE\nJob status & progress %"| FE
+
+    BE           -->|"gRPC + Kafka topic\nDispatch SnapshotJob"| ORCH
+    ORCH         -.->|"Async callback\nSnapshotReady event"| BE
+
+    ORCH         -->|"gRPC bidirectional stream\nJob contract + config"| CE
+
+    CE           -->|"JDBC / SQL streaming\nServer-side cursor\nfetch 1M × 50"| ODB
+    ODB          -->|"Chunked SQL result\nbatched rows"| CE
+
+    CE           -->|"Bulk insert\nParquet / columnar batch\n~450 MB per snapshot"| SDB
+    BE           -->|"JDBC read replica\nServe UI + export"| SDB
+
+    BE           -->|"Kafka publish\nAvro + schema registry\nSnapshot pointer + metadata"| KQ
+    KQ           -->|"Kafka Connect / Sink\nDelivery guarantee: at-least-once"| P2DB
+
+    %% ── Architecture notes ───────────────────────────────────────────────────
+    N1["📌 Idempotent runs:\nsnap_id dedup key\nretry-safe inserts"]:::note
+    N2["📌 Observability:\nPrometheus metrics\nOpenTelemetry traces\nGrafana dashboard"]:::note
+    N3["📌 Security:\nmTLS between services\nJWT at API Gateway\nKMS encrypted at rest"]:::note
+
+    Phase1 --- N1
+    Phase1 --- N2
+    Phase1 --- N3

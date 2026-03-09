@@ -1,0 +1,24 @@
+%% Sim-Engine dataflow sequence diagram
+sequenceDiagram
+    autonumber
+    participant FE as Sim-Engine-Frontend
+    participant BE as Sim-Engine-Backend
+    participant CE as Calculation Engine
+    participant ODB as Operational DB
+    participant SDB as Snapshot DB
+    participant KQ as Kafkaesque Queue
+    participant P2DB as Phase-2 Target DB
+
+    FE->>BE: HTTPS/REST\nSubmit system-id
+    BE->>CE: gRPC/mTLS\nForward system-id
+    CE->>ODB: JDBC/SQL\nFetch 1,000,000 rows × 50 columns
+    ODB-->>CE: SQL Resultset\n(Chunked streaming)
+    CE->>SDB: Batch ETL\nPersist snapshot dataset
+    CE-->>BE: Event/Webhook\nSnapshotReady(system-id)
+    Note over FE,BE: Phase 1 (current year)
+
+    BE->>SDB: JDBC/Read Replica\nRead persisted snapshot
+    BE->>KQ: Kafka (Avro/Proto)\nPublish snapshot pointer
+    KQ-->>P2DB: Kafka Connect/Sink\nPersist into separate DB
+    Note over KQ,P2DB: Phase 2 (deferred)
+

@@ -1,0 +1,33 @@
+sequenceDiagram
+    autonumber
+    critical Phase 1 (Current Year)
+        participant Modeler as Modeler / Analyst
+        participant FE as Sim-Engine Frontend
+        participant BE as Sim-Engine Backend
+        participant ORCH as Snapshot Orchestrator
+        participant CE as Calculation Engine
+        participant ODB as Operational DB
+        participant SDB as Snapshot DB
+
+        Modeler->>FE: Browser / HTTPS
+        FE->>BE: HTTPS / REST
+        BE->>ORCH: Job command (gRPC + Kafka topic)
+        ORCH->>CE: gRPC streaming job contract
+        CE->>ODB: JDBC / SQL streaming (fetch 1M rows × 50 cols)
+        ODB-->>CE: Chunked SQL result stream
+        CE->>SDB: Bulk insert snapshot dataset
+        CE-->>ORCH: Job completion (status, checksum)
+        ORCH-->>BE: Event callback (SnapshotReady)
+        BE-->>FE: WebSocket / SSE job status update
+        Modeler-->>SDB: SQL / BI query (read snapshot)
+        BE->>SDB: JDBC read replica (serve UI/export)
+    end
+
+    critical Phase 2 (Future Scope)
+        participant KQ as Kafkaesque Queue
+        participant P2DB as Phase-2 Target DB
+
+        BE->>KQ: Kafka (Avro/Proto) publish snapshot pointer
+        KQ-->>P2DB: Kafka Connect / Sink persist snapshot
+    end
+

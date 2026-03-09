@@ -1,0 +1,103 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background":        "#f8fafc",
+    "primaryColor":      "#f1f5f9",
+    "primaryTextColor":  "#1e293b",
+    "secondaryColor":    "#e2e8f0",
+    "tertiaryColor":     "#f8fafc",
+    "noteBkgColor":      "#fef9c3",
+    "noteTextColor":     "#1e293b",
+    "activationBkgColor":"#e0e7ff",
+    "actorBkg":          "#f1f5f9",
+    "actorBorder":       "#475569",
+    "actorTextColor":    "#1e293b",
+    "actorLineColor":    "#94a3b8",
+    "signalColor":       "#334155",
+    "signalTextColor":   "#1e293b",
+    "labelBoxBkgColor":  "#e2e8f0",
+    "labelTextColor":    "#1e293b",
+    "loopTextColor":     "#1e293b",
+    "sequenceNumberColor":"#1e293b"
+  }
+}}%%
+sequenceDiagram
+    autonumber
+
+    actor Modeler as 👤 Modeler / Analyst
+
+    box rgb(219,234,254) Presentation Layer
+        participant FE as Sim-Engine Frontend (React SPA)
+    end
+
+    box rgb(224,231,255) Application Layer — Spring Boot
+        participant BE as Sim-Engine Backend (API Gateway)
+        participant ORCH as Snapshot Orchestrator (Spring Batch)
+    end
+
+    box rgb(254,243,199) Compute Layer
+        participant CE as Calculation Engine (JVM Service)
+    end
+
+    box rgb(220,252,231) Data Layer
+        participant ODB as DW / Operational DB (Oracle RDBMS)
+        participant SDB as Snapshot DB (Analytics RDBMS)
+    end
+
+    box rgb(255,228,230) Phase 2 — Future Scope
+        participant KQ as Kafka Queue (compacted topic)
+        participant P2DB as Phase-2 Target DB (Data Lake)
+    end
+
+    %% ── Phase 1: Simulation job trigger ──────────────────────────────────────
+    Note over Modeler,SDB: ⚙️ Phase 1 — Current Year (2026)
+
+    Modeler->>FE: Open browser · HTTPS TLS 1.3
+    FE->>BE: HTTPS / REST — submit system-id + params
+    activate BE
+
+    BE->>ORCH: Kafka topic: job-commands · SnapshotJob event (Avro)
+    activate ORCH
+
+    ORCH->>CE: gRPC unary / streaming · job contract + config
+    activate CE
+
+    CE->>ODB: JDBC / SQL streaming · server-side cursor · fetch 1M × 50 cols
+    activate ODB
+    ODB-->>CE: Chunked SQL result · batched rows
+    deactivate ODB
+
+    CE->>SDB: Bulk insert · ~450 MB / 1M rows × 50 cols
+    activate SDB
+    SDB-->>CE: Insert ACK
+    deactivate SDB
+
+    CE-->>ORCH: Job complete (row count + checksum)
+    deactivate CE
+
+    ORCH-->>BE: Async callback · SnapshotReady event
+    deactivate ORCH
+
+    BE-->>FE: WebSocket / SSE · job status 100% ✅
+    deactivate BE
+
+    %% ── Read paths ───────────────────────────────────────────────────────────
+    Note over FE,SDB: 📖 Read paths — serve UI and direct BI access
+
+    FE->>BE: HTTPS / REST — request snapshot data
+    activate BE
+    BE->>SDB: JDBC read replica · serve UI + export
+    SDB-->>BE: Query result
+    BE-->>FE: JSON response
+    deactivate BE
+
+    Modeler-->>SDB: SQL / BI tool · direct read-only query
+    SDB-->>Modeler: Result set
+
+    %% ── Phase 2 ──────────────────────────────────────────────────────────────
+    Note over BE,P2DB: 🔮 Phase 2 — Future Scope (not in 2026 roadmap)
+
+    BE->>SDB: JDBC · read snapshot for publishing
+    SDB-->>BE: Snapshot data
+    BE-)KQ: Kafka publish · Avro + schema registry · snapshot pointer + metadata
+    KQ-)P2DB: Kafka Connect / Sink · at-least-once delivery

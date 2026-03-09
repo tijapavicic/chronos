@@ -1,0 +1,57 @@
+@startgantt
+title Chronos Roadmap 2026
+printscale weekly zoom 2
+
+skinparam gantt {
+    BarColor LightBlue
+    BarBorderColor Blue
+    GroupBackgroundColor LightGray
+    GroupBorderColor DimGray
+    MilestoneBackgroundColor Black
+}
+
+Project starts 2026-01-30
+
+-- Phase 1: MVP (Q1) --
+[Project Init] as [Init] lasts 1 week
+[Init] is colored in Green
+[Database Setup] as [DB] lasts 1 week
+[DB] starts at [Init]'s end
+[DB] is colored in Green
+[Core API] as [API] lasts 2 weeks
+[API] starts at [DB]'s end
+[API] is colored in Green
+[MVP Release] happens at [API]'s end
+
+-- Phase 2: Advanced Features (Q2) --
+[Complex Calculations] as [Calc] lasts 4 weeks
+[Calc] starts at [API]'s end
+[Calc] is colored in Orange
+[Risk Analysis Module] as [Risk] lasts 4 weeks
+[Risk] starts at [Calc]'s end
+[Risk] is colored in Orange
+[Interactive UI] as [UI] lasts 4 weeks
+[UI] starts at [Risk]'s end
+[UI] is colored in Orange
+
+-- Phase 3: Scaling & Cloud (Q3) --
+[Dockerization] as [Docker] lasts 2 weeks
+[Docker] starts at [UI]'s end
+[Docker] is colored in Purple
+[K8s Integration] as [K8s] lasts 4 weeks
+[K8s] starts at [Docker]'s end
+[K8s] is colored in Purple
+[Performance Tuning] as [Perf] lasts 6 weeks
+[Perf] starts at [K8s]'s end
+[Perf] is colored in Purple
+
+-- Phase 4: Final Polish (Q4) --
+[Security Audit] as [Sec] lasts 4 weeks
+[Sec] starts at [Perf]'s end
+[Sec] is colored in Red
+[documentation] as [Docs] lasts 4 weeks
+[Docs] starts at [Sec]'s end
+[Docs] is colored in Red
+[Final Release 1.0] happens at [Docs]'s end
+
+@endgantt
