@@ -1,0 +1,543 @@
+# Avro Schema Flow - Visual Diagrams
+
+## 1. Schema → Code Generation Flow
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  INPUT: Avro Schema (JSON)                                     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+📄 src/main/avro/TrafficLogEvent.avsc
+┌────────────────────────────────────────────────────────────────┐
+│ {                                                              │
+│   "namespace": "com.example.chronos.avro",                     │
+│   "type": "record",                                            │
+│   "name": "TrafficLogEvent",                                   │
+│   "fields": [                                                  │
+│     {"name": "correlationId", "type": "string"},               │
+│     {"name": "timestampMs", "type": "long"},                   │
+│     {"name": "method", "type": "string"},                      │
+│     {"name": "statusCode", "type": "int"}                      │
+│   ]                                                            │
+│ }                                                              │
+└────────────────────────────────────────────────────────────────┘
+                            │
+                            │ mvn generate-sources
+                            ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  PLUGIN: avro-maven-plugin                                     ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+┌────────────────────────────────────────────────────────────────┐
+│ 1. Parse JSON schema                                           │
+│ 2. Validate schema structure                                   │
+│ 3. Generate Java class with:                                   │
+│    • Fields + getters/setters                                  │
+│    • Builder pattern                                           │
+│    • Avro serialization methods                                │
+│    • Schema constant (SCHEMA$)                                 │
+│ 4. Write to target/generated-sources/avro/                     │
+└────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  OUTPUT: Generated Java Class                                  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+☕ target/generated-sources/avro/com/example/chronos/avro/
+   TrafficLogEvent.java
+┌────────────────────────────────────────────────────────────────┐
+│ public class TrafficLogEvent extends SpecificRecordBase {      │
+│   public static final Schema SCHEMA$ = ...;                    │
+│                                                                │
+│   private String correlationId;                                │
+│   private Long timestampMs;                                    │
+│   private String method;                                       │
+│   private Integer statusCode;                                  │
+│                                                                │
+│   public String getCorrelationId() { ... }                     │
+│   public void setCorrelationId(String v) { ... }               │
+│   // ... more getters/setters                                 │
+│                                                                │
+│   public static Builder newBuilder() { ... }                   │
+│ }                                                              │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 2. Serialization Flow (Java Object → Binary)
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  STEP 1: Create Java Object                                    ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+TrafficLogEvent event = TrafficLogEvent.newBuilder()
+    .setCorrelationId("abc-123")
+    .setTimestampMs(Instant.ofEpochMilli(1678901234567L))
+    .setMethod("GET")
+    .setStatusCode(200)
+    .build();
+
+Memory representation:
+┌────────────────────────────────────────┐
+│ TrafficLogEvent@1a2b3c4d               │
+│ ┌────────────────────────────────────┐ │
+│ │ correlationId: "abc-123"           │ │
+│ │ timestampMs: Instant(1678901234567)│ │
+│ │ method: "GET"                      │ │
+│ │ statusCode: 200                    │ │
+│ └────────────────────────────────────┘ │
+└────────────────────────────────────────┘
+                  │
+                  ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  STEP 2: Serialize to Avro Binary                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+SpecificDatumWriter<TrafficLogEvent> writer =
+    new SpecificDatumWriter<>(TrafficLogEvent.SCHEMA$);
+
+ByteArrayOutputStream baos = new ByteArrayOutputStream();
+BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(baos, null);
+
+writer.write(event, encoder);  ← Uses SCHEMA$ to encode fields
+encoder.flush();
+
+byte[] binary = baos.toByteArray();
+
+┌────────────────────────────────────────────────────────────────┐
+│ AVRO BINARY ENCODING                                           │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│ Field: correlationId (string)                                  │
+│   Length: 0x0E (14 bytes, variable-length encoding)            │
+│   Value:  0x61 0x62 0x63 0x2d 0x31 0x32 0x33  "abc-123"       │
+│                                                                │
+│ Field: timestampMs (long)                                      │
+│   Value:  0x87 0xD6 0xCB 0xB5 0x86 0x01 0x00 0x00             │
+│           (1678901234567 in little-endian)                     │
+│                                                                │
+│ Field: method (string)                                         │
+│   Length: 0x06 (6 bytes)                                       │
+│   Value:  0x47 0x45 0x54  "GET"                               │
+│                                                                │
+│ Field: statusCode (int)                                        │
+│   Value:  0xC8 0x01 (200 as zigzag-encoded varint)            │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+
+Result: byte[~200] (compact binary, no field names!)
+                  │
+                  ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  STEP 3: Publish to Kafka                                      ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+kafkaTemplate.send(
+    topic: "simulation.traffic.log",
+    key: "abc-123",
+    value: byte[200]  ← Avro binary
+);
+
+Kafka Message:
+┌────────────────────────────────────────┐
+│ Topic: simulation.traffic.log          │
+│ Partition: 1                           │
+│ Offset: 42                             │
+│ Key: "abc-123"                         │
+│ Value: [0x0E, 0x61, 0x62, 0x63, ...]   │  ← Binary Avro
+│ Timestamp: 1678901234567               │
+└────────────────────────────────────────┘
+```
+
+---
+
+## 3. Deserialization Flow (Binary → Java Object)
+
+```
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  STEP 1: Consumer Receives Binary from Kafka                   ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+@KafkaListener(topics = "simulation.traffic.log")
+public void consume(byte[] payload) {
+    // payload = [0x0E, 0x61, 0x62, 0x63, 0x2d, 0x31, 0x32, 0x33, ...]
+}
+
+Binary data:
+┌────────────────────────────────────────────────────────────────┐
+│ [0x0E, 0x61, 0x62, 0x63, 0x2d, 0x31, 0x32, 0x33, 0x87, 0xD6,  │
+│  0xCB, 0xB5, 0x86, 0x01, 0x00, 0x00, 0x06, 0x47, 0x45, 0x54,  │
+│  0xC8, 0x01, ...]                                              │
+└────────────────────────────────────────────────────────────────┘
+                  │
+                  ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  STEP 2: Deserialize Using Schema                              ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+SpecificDatumReader<TrafficLogEvent> reader =
+    new SpecificDatumReader<>(TrafficLogEvent.SCHEMA$);
+
+BinaryDecoder decoder =
+    DecoderFactory.get().binaryDecoder(payload, null);
+
+TrafficLogEvent event = reader.read(null, decoder);
+
+Decoding process:
+┌────────────────────────────────────────────────────────────────┐
+│ Reader uses SCHEMA$ to decode bytes in order:                  │
+│                                                                │
+│ 1. Read variable-length int → 0x0E = 14 bytes                 │
+│    Read next 14 bytes → "abc-123"                             │
+│    → correlationId = "abc-123"                                │
+│                                                                │
+│ 2. Read 8 bytes (long) → 0x87D6CBB58601 = 1678901234567       │
+│    → timestampMs = Instant(1678901234567)                     │
+│                                                                │
+│ 3. Read variable-length int → 0x06 = 6 bytes                  │
+│    Read next 6 bytes → "GET"                                  │
+│    → method = "GET"                                           │
+│                                                                │
+│ 4. Read zigzag varint → 0xC801 = 200                          │
+│    → statusCode = 200                                         │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+                  │
+                  ▼
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  STEP 3: Fully Populated Java Object                           ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+TrafficLogEvent object:
+┌────────────────────────────────────────┐
+│ TrafficLogEvent@9x8y7z6w               │
+│ ┌────────────────────────────────────┐ │
+│ │ correlationId: "abc-123"           │ │
+│ │ timestampMs: Instant(1678901234567)│ │
+│ │ method: "GET"                      │ │
+│ │ statusCode: 200                    │ │
+│ └────────────────────────────────────┘ │
+└────────────────────────────────────────┘
+
+Now you can use it:
+event.getCorrelationId()  → "abc-123"
+event.getMethod()         → "GET"
+event.getStatusCode()     → 200
+```
+
+---
+
+## 4. Complete End-to-End Flow
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║                       CHRONOS APPLICATION                             ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+ HTTP Request: GET /simulation/ping
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  SimulationTrafficLoggingFilter                                      │
+│  • Captures request metadata                                         │
+│  • Processes request through filter chain                            │
+│  • Captures response metadata                                        │
+└──────────────────────────────────────────────────────────────────────┘
+       │
+       │ Build Avro object
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  TrafficLogEvent.newBuilder()                                        │
+│    .setCorrelationId("abc-123")                                      │
+│    .setTimestampMs(Instant.now())                                    │
+│    .setMethod("GET")                                                 │
+│    .setPath("/simulation/ping")                                      │
+│    .setStatusCode(200)                                               │
+│    .setDurationMs(12L)                                               │
+│    .build()                                                          │
+└──────────────────────────────────────────────────────────────────────┘
+       │
+       │ Serialize
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  TrafficLogProducer.serializeToAvro()                                │
+│  • SpecificDatumWriter uses TrafficLogEvent.SCHEMA$                  │
+│  • BinaryEncoder writes to byte array                                │
+│  • Result: byte[~200] (compact binary)                               │
+└──────────────────────────────────────────────────────────────────────┘
+       │
+       │ Publish
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  KafkaTemplate.send()                                                │
+│  • Topic: simulation.traffic.log                                     │
+│  • Key: "abc-123" (correlationId)                                    │
+│  • Value: byte[200] (Avro binary)                                    │
+└──────────────────────────────────────────────────────────────────────┘
+       │
+       ▼
+╔═══════════════════════════════════════════════════════════════════════╗
+║                       KAFKA BROKER                                    ║
+║  Topic: simulation.traffic.log                                       ║
+║  Partition: 1 (hash of "abc-123")                                    ║
+║  Offset: 42                                                           ║
+║  Message: {key: "abc-123", value: byte[200]}                          ║
+╚═══════════════════════════════════════════════════════════════════════╝
+       │
+       │ Consume
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  TrafficLogConsumer                                                  │
+│  @KafkaListener(topics = "simulation.traffic.log")                   │
+│  public void consume(byte[] payload)                                 │
+└──────────────────────────────────────────────────────────────────────┘
+       │
+       │ Deserialize
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  TrafficLogConsumer.deserializeFromAvro()                            │
+│  • SpecificDatumReader uses TrafficLogEvent.SCHEMA$                  │
+│  • BinaryDecoder reads byte array                                    │
+│  • Result: TrafficLogEvent object                                    │
+└──────────────────────────────────────────────────────────────────────┘
+       │
+       │ Process
+       ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  Log / Analytics / Storage                                           │
+│  • Log to console/file                                               │
+│  • Send to Elasticsearch                                             │
+│  • Store in database                                                 │
+│  • Trigger alerts                                                    │
+└──────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+KEY: Schema (TrafficLogEvent.SCHEMA$) is used at BOTH ends
+     • Producer uses it to SERIALIZE (Java → Binary)
+     • Consumer uses it to DESERIALIZE (Binary → Java)
+═══════════════════════════════════════════════════════════════════════
+```
+
+---
+
+## 5. Schema Evolution Example
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║  SCENARIO: Adding a new field "region"                               ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  VERSION 1 (Old Schema)                                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ {                                                                    │
+│   "name": "TrafficLogEvent",                                         │
+│   "fields": [                                                        │
+│     {"name": "correlationId", "type": "string"},                     │
+│     {"name": "method", "type": "string"},                            │
+│     {"name": "statusCode", "type": "int"}                            │
+│   ]                                                                  │
+│ }                                                                    │
+└──────────────────────────────────────────────────────────────────────┘
+
+                         │ Schema evolution
+                         ▼
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  VERSION 2 (New Schema)                                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ {                                                                    │
+│   "name": "TrafficLogEvent",                                         │
+│   "fields": [                                                        │
+│     {"name": "correlationId", "type": "string"},                     │
+│     {"name": "method", "type": "string"},                            │
+│     {"name": "statusCode", "type": "int"},                           │
+│     {"name": "region", "type": ["null", "string"],                   │
+│      "default": null}          ← NEW FIELD with default              │
+│   ]                                                                  │
+│ }                                                                    │
+└──────────────────────────────────────────────────────────────────────┘
+
+─────────────────────────────────────────────────────────────────────────
+
+COMPATIBILITY TEST 1: Forward Compatibility
+(New Producer v2 → Old Consumer v1)
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  Producer (Schema v2)           Kafka          Consumer (Schema v1)  │
+│                                                                      │
+│  event = TrafficLogEvent                                             │
+│    .newBuilder()                                                     │
+│    .setCorrelationId("abc")                                          │
+│    .setMethod("GET")                                                 │
+│    .setStatusCode(200)                                               │
+│    .setRegion("us-east-1")  ← NEW                                    │
+│    .build();                                                         │
+│                                   │                                  │
+│  Serialize with v2 schema ────────┼──────→ Deserialize with v1      │
+│                                   │        schema                    │
+│  Binary includes "region"         │        ✅ Ignores "region"      │
+│                                   │        ✅ Reads other fields    │
+│                                   │                                  │
+│  Result: ✅ Compatible!           │        event.correlationId =    │
+│                                   │        "abc"                    │
+│                                   │        event.method = "GET"     │
+│                                   │        event.statusCode = 200   │
+└──────────────────────────────────────────────────────────────────────┘
+
+─────────────────────────────────────────────────────────────────────────
+
+COMPATIBILITY TEST 2: Backward Compatibility
+(Old Producer v1 → New Consumer v2)
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  Producer (Schema v1)           Kafka          Consumer (Schema v2)  │
+│                                                                      │
+│  event = TrafficLogEvent                                             │
+│    .newBuilder()                                                     │
+│    .setCorrelationId("abc")                                          │
+│    .setMethod("GET")                                                 │
+│    .setStatusCode(200)                                               │
+│    .build();                                                         │
+│                                   │                                  │
+│  Serialize with v1 schema ────────┼──────→ Deserialize with v2      │
+│                                   │        schema                    │
+│  Binary does NOT include "region" │        ✅ Uses default: null    │
+│                                   │        ✅ Reads other fields    │
+│                                   │                                  │
+│  Result: ✅ Compatible!           │        event.correlationId =    │
+│                                   │        "abc"                    │
+│                                   │        event.method = "GET"     │
+│                                   │        event.statusCode = 200   │
+│                                   │        event.region = null ← default │
+└──────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+KEY: Always provide defaults for new fields to maintain compatibility!
+═══════════════════════════════════════════════════════════════════════
+```
+
+---
+
+## 6. Comparison: JSON vs Avro Binary
+
+```
+╔═══════════════════════════════════════════════════════════════════════╗
+║  SAME DATA: Two Formats                                              ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  JSON FORMAT (500 bytes)                                             │
+├──────────────────────────────────────────────────────────────────────┤
+│ {                                                                    │
+│   "correlationId": "abc-123",                                        │
+│   "timestampMs": 1678901234567,                                      │
+│   "method": "GET",                                                   │
+│   "path": "/simulation/ping",                                        │
+│   "queryString": null,                                               │
+│   "statusCode": 200,                                                 │
+│   "durationMs": 12,                                                  │
+│   "clientIp": "127.0.0.1",                                           │
+│   "userAgent": "curl/7.64.1",                                        │
+│   "requestBodySizeBytes": 0,                                         │
+│   "responseBodySizeBytes": 0,                                        │
+│   "serviceName": "chronos"                                           │
+│ }                                                                    │
+│                                                                      │
+│ ❌ Contains field names in EVERY message                             │
+│ ❌ Text format (UTF-8 encoding)                                      │
+│ ❌ Verbose                                                            │
+└──────────────────────────────────────────────────────────────────────┘
+
+                              VS
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  AVRO BINARY FORMAT (~200 bytes, 60% smaller!)                       │
+├──────────────────────────────────────────────────────────────────────┤
+│ [0x0E, 0x61, 0x62, 0x63, 0x2d, 0x31, 0x32, 0x33, 0x87, 0xD6, 0xCB,  │
+│  0xB5, 0x86, 0x01, 0x00, 0x00, 0x06, 0x47, 0x45, 0x54, 0x2E, 0x2F,  │
+│  0x73, 0x69, 0x6D, 0x75, 0x6C, 0x61, 0x74, 0x69, 0x6F, 0x6E, 0x2F,  │
+│  0x70, 0x69, 0x6E, 0x67, 0x00, 0xC8, 0x01, 0x18, 0x12, 0x31, 0x32,  │
+│  0x37, 0x2E, 0x30, 0x2E, 0x30, 0x2E, 0x31, 0x16, 0x63, 0x75, 0x72,  │
+│  0x6C, 0x2F, 0x37, 0x2E, 0x36, 0x34, 0x2E, 0x31, 0x00, 0x00, 0x0E,  │
+│  0x63, 0x68, 0x72, 0x6F, 0x6E, 0x6F, 0x73]                           │
+│                                                                      │
+│ ✅ No field names (schema defines field order)                       │
+│ ✅ Binary format (compact encoding)                                  │
+│ ✅ Efficient                                                          │
+└──────────────────────────────────────────────────────────────────────┘
+
+─────────────────────────────────────────────────────────────────────────
+
+PERFORMANCE COMPARISON (1 million messages):
+
+┌─────────────────────────┬──────────────┬──────────────┬─────────────┐
+│ Metric                  │ JSON         │ Avro Binary  │ Improvement │
+├─────────────────────────┼──────────────┼──────────────┼─────────────┤
+│ Total size              │ 500 MB       │ 200 MB       │ 60% smaller │
+│ Serialization time      │ 10.0 sec     │ 3.5 sec      │ 3x faster   │
+│ Deserialization time    │ 12.0 sec     │ 4.2 sec      │ 3x faster   │
+│ Network transfer (1Gbps)│ 4.0 sec      │ 1.6 sec      │ 2.5x faster │
+│ Disk storage            │ 500 MB       │ 200 MB       │ 60% less    │
+│ Monthly cost (AWS S3)   │ $11.50       │ $4.60        │ $6.90 saved │
+└─────────────────────────┴──────────────┴──────────────┴─────────────┘
+
+═══════════════════════════════════════════════════════════════════════
+CONCLUSION: Avro saves bandwidth, storage, and processing time!
+═══════════════════════════════════════════════════════════════════════
+```
+
+---
+
+## Summary: The Complete Picture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    YOU MAINTAIN THIS                                │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+         ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+         ┃  TrafficLogEvent.avsc (Schema)   ┃
+         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                               │
+                   mvn generate-sources
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MAVEN GENERATES THIS                             │
+└─────────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+        ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+        ┃  TrafficLogEvent.java (Generated)  ┃
+        ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    YOUR CODE USES THIS                              │
+└─────────────────────────────────────────────────────────────────────┘
+           │                                       │
+           │ Build object                          │ Deserialize
+           ▼                                       ▼
+  TrafficLogEvent.newBuilder()        SpecificDatumReader
+      .set...()                           .read(bytes)
+      .build()                                │
+           │                                  │
+           │ Serialize                        ▼
+           ▼                          TrafficLogEvent
+  SpecificDatumWriter                     (object)
+      .write(object)
+           │
+           ▼
+      byte[] binary
+           │
+           ▼
+        Kafka
+```
+
+**The schema is the single source of truth. Everything else is generated or derived!**
+

@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Chronos – local Kafka stack
+#
+# Start:   docker compose up -d
+# Stop:    docker compose down
+# Destroy: docker compose down -v   (removes kafka_data volume)
+#
+# Services
+#   kafka           – single-node KRaft broker (no ZooKeeper)  → port 9092
+#   kafka-init      – one-shot container that creates the topic  (exits 0)
+#   kafka-ui        – Provectus Kafka UI dashboard              → http://localhost:8090
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Kafka broker (KRaft / no ZooKeeper) ──────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: chronos-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"    # PLAINTEXT for Spring Boot app running on the host
+    environment:
+      # ── KRaft identity ──────────────────────────────────────────────────
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"   # base64-encoded cluster UUID (22 chars)
+
+      # ── Listeners ────────────────────────────────────────────────────────
+      # PLAINTEXT (9092)  – used by the Spring Boot app on the host machine
+      # INTERNAL  (29092) – used by other Docker containers (kafka-init, kafka-ui)
+      # CONTROLLER(9093)  – internal KRaft quorum only
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092,INTERNAL://kafka:29092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+
+      # ── Broker tuning ─────────────────────────────────────────────────────
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"    # topics are managed via kafka-init
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+      KAFKA_LOG_RETENTION_HOURS: 168            # 7 days
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+  # ── One-shot topic provisioning ──────────────────────────────────────────
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: chronos-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: [ "/bin/bash", "-c" ]
+    command:
+      - |
+        set -e
+        echo ">>> Creating topic: simulation.traffic.log"
+        kafka-topics \
+          --bootstrap-server kafka:29092 \
+          --create \
+          --if-not-exists \
+          --topic simulation.traffic.log \
+          --partitions 3 \
+          --replication-factor 1 \
+          --config retention.ms=604800000 \
+          --config cleanup.policy=delete
+
+        echo ">>> Topic details:"
+        kafka-topics \
+          --bootstrap-server kafka:29092 \
+          --describe \
+          --topic simulation.traffic.log
+
+        echo ">>> Done."
+    restart: on-failure
+
+  # ── Kafka UI (Provectus) ─────────────────────────────────────────────────
+  # Dashboard: http://localhost:8090
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: chronos-kafka-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "chronos-local"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:29092"
+      # Optional: show message bytes as raw hex / base64 (Avro binary is not human-readable)
+      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: PLAINTEXT
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  kafka_data:
+    driver: local
+

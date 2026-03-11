@@ -1,0 +1,74 @@
+{
+  "namespace": "com.example.chronos.avro",
+  "type": "record",
+  "name": "TrafficLogEvent",
+  "doc": "Avro schema for HTTP traffic audit log events captured at the Simulation controller boundary.",
+  "fields": [
+    {
+      "name": "correlationId",
+      "type": "string",
+      "doc": "Correlation ID sourced from X-Correlation-Id request header, or auto-generated UUID if absent."
+    },
+    {
+      "name": "timestampMs",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      },
+      "doc": "Epoch-millisecond timestamp of when the request was received."
+    },
+    {
+      "name": "method",
+      "type": "string",
+      "doc": "HTTP method: GET, POST, PUT, DELETE, PATCH, etc."
+    },
+    {
+      "name": "path",
+      "type": "string",
+      "doc": "Request URI path (e.g. /simulation/ping)."
+    },
+    {
+      "name": "queryString",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "URL query string, null when not present."
+    },
+    {
+      "name": "statusCode",
+      "type": "int",
+      "doc": "HTTP response status code (e.g. 200, 400, 500)."
+    },
+    {
+      "name": "durationMs",
+      "type": "long",
+      "doc": "End-to-end request processing duration in milliseconds."
+    },
+    {
+      "name": "clientIp",
+      "type": "string",
+      "doc": "Remote client IP address; respects X-Forwarded-For if behind a proxy."
+    },
+    {
+      "name": "userAgent",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "User-Agent request header value, null when not present."
+    },
+    {
+      "name": "requestBodySizeBytes",
+      "type": "long",
+      "doc": "Size of the request body in bytes (0 for methods with no body)."
+    },
+    {
+      "name": "responseBodySizeBytes",
+      "type": "long",
+      "doc": "Size of the response body in bytes."
+    },
+    {
+      "name": "serviceName",
+      "type": "string",
+      "doc": "spring.application.name of the originating service."
+    }
+  ]
+}
+

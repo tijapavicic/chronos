@@ -1,0 +1,101 @@
+# Avro Code Generation Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        YOU CREATE (Manual)                              │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  │
+                                  ▼
+                  ┌───────────────────────────────────┐
+                  │  src/main/avro/                   │
+                  │  TrafficLogEvent.avsc             │
+                  │                                   │
+                  │  {                                │
+                  │    "namespace": "com...avro",     │
+                  │    "type": "record",              │
+                  │    "name": "TrafficLogEvent",     │
+                  │    "fields": [...]                │
+                  │  }                                │
+                  └───────────────┬───────────────────┘
+                                  │
+                                  │ You run:
+                                  │ mvn generate-sources
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                  MAVEN PLUGIN (Automatic)                               │
+│                                                                         │
+│  ┌────────────────────────────────────────────────────────┐            │
+│  │  avro-maven-plugin (configured in pom.xml)             │            │
+│  │  • Reads *.avsc from src/main/avro/                    │            │
+│  │  • Parses JSON schema                                  │            │
+│  │  • Generates Java class using Avro code generator      │            │
+│  │  • Outputs to target/generated-sources/avro/           │            │
+│  └────────────────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────┘
+                                  │
+                                  │
+                                  ▼
+                  ┌───────────────────────────────────┐
+                  │  target/generated-sources/avro/   │
+                  │  com/example/chronos/avro/        │
+                  │  TrafficLogEvent.java             │
+                  │                                   │
+                  │  public class TrafficLogEvent     │
+                  │     extends SpecificRecordBase {  │
+                  │    private String correlationId;  │
+                  │    private Instant timestampMs;   │
+                  │    // ... all fields              │
+                  │    // ... getters/setters         │
+                  │    // ... builder pattern         │
+                  │  }                                │
+                  └───────────────┬───────────────────┘
+                                  │
+                                  │ Maven adds to classpath
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    YOUR CODE CAN NOW USE IT                             │
+│                                                                         │
+│  ┌────────────────────────────────────────────────────────┐            │
+│  │  SimulationTrafficLoggingFilter.java                   │            │
+│  │                                                         │            │
+│  │  import com.example.chronos.avro.TrafficLogEvent;      │  ← Works!  │
+│  │                                                         │            │
+│  │  TrafficLogEvent event = TrafficLogEvent.newBuilder()  │            │
+│  │      .setCorrelationId(correlationId)                  │            │
+│  │      .setTimestampMs(Instant.now())                    │            │
+│  │      .build();                                         │            │
+│  └────────────────────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════
+                         KEY POINTS
+═══════════════════════════════════════════════════════════════════════════
+
+✅  You maintain:  src/main/avro/TrafficLogEvent.avsc (schema only)
+❌  You DON'T write: TrafficLogEvent.java manually
+✅  Maven generates: target/generated-sources/avro/.../TrafficLogEvent.java
+✅  Automatic: Runs every time you build (mvn compile, mvn package, etc.)
+✅  Version control: Only commit the .avsc schema, not generated files
+
+═══════════════════════════════════════════════════════════════════════════
+                      HOW TO TRIGGER GENERATION
+═══════════════════════════════════════════════════════════════════════════
+
+Command Line:            IntelliJ IDEA:              Automatic:
+────────────────         ─────────────────────────   ──────────────────
+mvn generate-sources     Maven → Lifecycle →         mvn compile
+                         generate-sources            mvn package
+./generate-avro.sh       (double-click)              mvn spring-boot:run
+                                                     Build Project (⌘F9)
+
+═══════════════════════════════════════════════════════════════════════════
+```
+
+## 🎯 Bottom Line
+
+**The import is correct.** Just run `mvn generate-sources` and Maven will create the class for you!
+

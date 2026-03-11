@@ -58,6 +58,11 @@
         </dependency>
         <!-- Testcontainers for Oracle DB integration tests -->
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
             <version>1.19.3</version>
@@ -110,6 +115,19 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Apache Avro runtime (serialisation / deserialisation) -->
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>1.11.3</version>
+        </dependency>
+
         <!-- Spring Cloud starter to provide @RefreshScope and /actuator/refresh -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -119,6 +137,30 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.avro</groupId>
+                <artifactId>avro-maven-plugin</artifactId>
+                <version>1.11.3</version>
+                <executions>
+                    <execution>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>schema</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Reads all *.avsc files from this directory -->
+                            <sourceDirectory>${project.basedir}/src/main/avro</sourceDirectory>
+                            <!-- Generated classes land here and are auto-added to compile source roots -->
+                            <outputDirectory>${project.build.directory}/generated-sources/avro</outputDirectory>
+                            <!-- Use java.lang.String instead of CharSequence for string fields -->
+                            <stringType>String</stringType>
+                            <!-- Map timestamp-millis logical type to java.time.Instant -->
+<!--                            <dateTimeType>jsr310</dateTimeType>-->
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
